@@ -1,0 +1,52 @@
+name: build binary
+
+on:
+  release:
+    types: [published]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.47.0
+          target: x86_64-unknown-linux-gnu
+          
+      - run: rustc --version
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          toolchain: 1.47.0
+          args: --release --features final --target x86_64-unknown-linux-gnu
+
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.2.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name:  Set env
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+
+      - name: Archive 
+        run: zip -j openethereum_linux.zip target/x86_64-unknown-linux-gnu/release/openethereum
+
+      - name: Upload Release Asset
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }} 
+          asset_path: ./openethereum_linux.zip
+          asset_name: openethereum_linux_${{ env.RELEASE_VERSION }}.zip
+          asset_content_type: application/zip
+ 
+
