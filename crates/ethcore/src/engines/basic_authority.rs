@@ -144,7 +144,7 @@ impl Engine<EthereumMachine> for BasicAuthority {
         &self,
         _header: &Header,
         _auxiliary: AuxiliaryData,
-        machine: &EthereumMachine,
+        _machine: &EthereumMachine,
     ) -> super::EpochChange<EthereumMachine> {
         // don't bother signalling even though a contract might try.
         super::EpochChange::No

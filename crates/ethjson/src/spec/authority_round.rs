@@ -80,6 +80,8 @@ pub struct AuthorityRoundParams {
     /// block number of the single transition is strictly less than any of the block numbers in the
     /// map.
     pub block_reward_contract_transitions: Option<BTreeMap<Uint, Address>>,
+    /// Block reward mode. This overrides the block reward contract mode.
+    pub block_reward_mode_transitions: Option<BTreeMap<Uint, Uint>>,
     /// Block reward code. This overrides the block reward contract address.
     pub block_reward_contract_code: Option<Bytes>,
     /// Block at which maximum uncle count should be considered.

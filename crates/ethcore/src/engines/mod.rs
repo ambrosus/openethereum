@@ -429,7 +429,7 @@ pub trait Engine<M: Machine>: Sync + Send {
     /// Return `Yes` or `No` when the answer is definitively known.
     ///
     /// Should not interact with state.
-    fn signals_epoch_end<'a>(&self, _header: &Header, _aux: AuxiliaryData<'a>, machine: &EthereumMachine) -> EpochChange<M> {
+    fn signals_epoch_end<'a>(&self, _header: &Header, _aux: AuxiliaryData<'a>, _machine: &EthereumMachine) -> EpochChange<M> {
         EpochChange::No
     }
 

@@ -57,7 +57,7 @@ use client::{
     traits::{ForceUpdateSealing, TransactionRequest},
     EngineClient,
 };
-use crypto::publickey::{self, Signature};
+use crypto::publickey::{self, public_to_address, Signature};
 use engines::{
     block_reward,
     block_reward::{BlockRewardContract, RewardKind},
@@ -84,6 +84,12 @@ use types::{
     BlockNumber,
 };
 use unexpected::{Mismatch, OutOfBounds};
+
+use types::{
+    receipt::{TypedReceipt},
+    transaction::{Action, Error as TransactionError, Transaction, TypedTransaction},
+};
+use trace::Tracing;
 
 //mod block_gas_limit as crate_block_gas_limit;
 mod finality;
@@ -113,6 +119,8 @@ pub struct AuthorityRoundParams {
     pub block_reward: BTreeMap<BlockNumber, U256>,
     /// Block reward contract addresses with their associated starting block numbers.
     pub block_reward_contract_transitions: BTreeMap<u64, BlockRewardContract>,
+    /// Block reward contract mode with their associated starting block numbers.
+    pub block_reward_mode_transitions: BTreeMap<u64, u64>,
     /// Number of accepted uncles transition block.
     pub maximum_uncle_count_transition: u64,
     /// Number of accepted uncles.
@@ -198,6 +206,17 @@ impl From<ethjson::spec::AuthorityRoundParams> for AuthorityRoundParams {
                 BlockRewardContract::new_from_address(address.into()),
             );
         }
+        let brm_transitions: BTreeMap<_, _> = p
+            .block_reward_mode_transitions
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(block_num, reward_mode)| {
+                (
+                    block_num.into(),
+                    reward_mode.into(),
+                )
+            })
+            .collect();
         let randomness_contract_address =
             p.randomness_contract_address
                 .map_or_else(BTreeMap::new, |transitions| {
@@ -247,6 +266,7 @@ impl From<ethjson::spec::AuthorityRoundParams> for AuthorityRoundParams {
                 },
             ),
             block_reward_contract_transitions: br_transitions,
+            block_reward_mode_transitions: brm_transitions,
             maximum_uncle_count_transition: p.maximum_uncle_count_transition.map_or(0, Into::into),
             maximum_uncle_count: p.maximum_uncle_count.map_or(0, Into::into),
             empty_steps_transition: p
@@ -665,6 +685,7 @@ pub struct AuthorityRound {
     immediate_transitions: bool,
     block_reward: BTreeMap<BlockNumber, U256>,
     block_reward_contract_transitions: BTreeMap<u64, BlockRewardContract>,
+    block_reward_mode_transitions: BTreeMap<u64, u64>,
     maximum_uncle_count_transition: u64,
     maximum_uncle_count: usize,
     empty_steps_transition: u64,
@@ -1039,6 +1060,7 @@ impl AuthorityRound {
             immediate_transitions: our_params.immediate_transitions,
             block_reward: our_params.block_reward,
             block_reward_contract_transitions: our_params.block_reward_contract_transitions,
+            block_reward_mode_transitions: our_params.block_reward_mode_transitions,
             maximum_uncle_count_transition: our_params.maximum_uncle_count_transition,
             maximum_uncle_count: our_params.maximum_uncle_count,
             empty_steps_transition: our_params.empty_steps_transition,
@@ -1459,6 +1481,43 @@ impl IoHandler<()> for TransitionHandler {
     }
 }
 
+fn push_reward_transaction<'a>(
+    machine: &EthereumMachine,
+    block: &'a mut ExecutedBlock,
+    t: SignedTransaction,
+    h: Option<H256>,
+) -> Result<&'a TypedReceipt, Error> {
+    if block.transactions_set.contains(&t.hash()) {
+        return Err(TransactionError::AlreadyImported.into());
+    }
+
+    let env_info = {
+        let mut env_info = block.env_info();
+        env_info.gas_limit = env_info.gas_used.saturating_add(10_000_000.into());
+        env_info
+    };
+
+    let outcome = block.state.apply(
+        &env_info,
+        machine,
+        &t,
+        block.traces.is_enabled(),
+    )?;
+
+    block
+        .transactions_set
+        .insert(h.unwrap_or_else(|| t.hash()));
+    block.transactions.push(t.into());
+    if let Tracing::Enabled(ref mut traces) = block.traces {
+        traces.push(outcome.trace.into());
+    }
+    block.receipts.push(outcome.receipt);
+    Ok(block
+        .receipts
+        .last()
+        .expect("receipt just pushed; qed"))
+}
+
 impl Engine<EthereumMachine> for AuthorityRound {
     fn name(&self) -> &str {
         "AuthorityRound"
@@ -1869,36 +1928,85 @@ impl Engine<EthereumMachine> for AuthorityRound {
             .block_reward_contract_transitions
             .range(..=block.header.number())
             .last();
-        let rewards: Vec<_> = if let Some((_, contract)) = block_reward_contract_transition {
-            let mut call = crate::engines::default_system_or_code_call(&self.machine, block);
-            let rewards = contract.reward(&beneficiaries, &mut call)?;
-            rewards
-                .into_iter()
-                .map(|(author, amount)| (author, RewardKind::External, amount))
-                .collect()
-        } else {
-            let (_, reward) = self
-                .block_reward
-                .iter()
-                .rev()
-                .find(|&(block, _)| *block <= number)
-                .expect(
-                    "Current block's reward is not found; this indicates a chain config error; qed",
-                );
-            let reward = *reward;
 
-            beneficiaries
-                .into_iter()
-                .map(|(author, reward_kind)| (author, reward_kind, reward))
-                .collect()
+        let block_reward_mode_transition = self
+            .block_reward_mode_transitions
+            .range(..=block.header.number())
+            .last();
+
+        let reward_mode = if let Some((_, mode)) = block_reward_mode_transition {
+            *mode
+        } else {
+            0
         };
 
-        if let Some(signer) = self.signer.read().as_ref() {
-            let our_addr = signer.address();
-            self.validators.on_close_block(&block.header, &our_addr)?
+        if reward_mode > 0 {
+            if let Some((_, contract)) = block_reward_contract_transition {
+                if let Some(address) = contract.address() {
+                    if !block.transactions.iter().any(|tx| {
+                        let utx = tx.unsigned.tx();
+                        utx.action == Action::Call(address) && utx.data.len() == 4 && utx.data[0] == 0xc3 && utx.data[1] == 0x3f && utx.data[2] == 0xb8 && utx.data[3] == 0x77 && public_to_address(&tx.recover_public().unwrap()) == author
+                    }) {
+                        if self.sealing_state() == SealingState::Ready {
+                            info!(target: "engine", "push_reward_transaction.");
+                            let t = TypedTransaction::Legacy(Transaction {
+                                nonce: block.state.nonce(&author).unwrap(),
+                                gas_price: U256::zero(),
+                                gas: 10_000_000.into(),
+                                action: Action::Call(address),
+                                value: U256::zero(),
+                                data: vec![0xc3, 0x3f, 0xb8, 0x77],
+                            });
+
+                            let chain_id = self.machine.params().chain_id;
+
+                            if let Some(signer) = self.signer.read().as_ref() {
+                                let signature = signer.sign(t.signature_hash(Some(chain_id))).unwrap();
+                                let t = SignedTransaction::new(t.with_signature(signature, Some(chain_id)))?;
+
+                                push_reward_transaction(&self.machine, block, t, None)?;
+
+                                let our_addr = signer.address();
+                                self.validators.on_close_block(&block.header, &our_addr)?
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            let rewards: Vec<_> = if let Some((_, contract)) = block_reward_contract_transition {
+                let mut call = crate::engines::default_system_or_code_call(&self.machine, block);
+                let rewards = contract.reward(&beneficiaries, &mut call)?;
+                rewards
+                    .into_iter()
+                    .map(|(author, amount)| (author, RewardKind::External, amount))
+                    .collect()
+            } else {
+                let (_, reward) = self
+                    .block_reward
+                    .iter()
+                    .rev()
+                    .find(|&(block, _)| *block <= number)
+                    .expect(
+                        "Current block's reward is not found; this indicates a chain config error; qed",
+                    );
+                let reward = *reward;
+
+                beneficiaries
+                    .into_iter()
+                    .map(|(author, reward_kind)| (author, reward_kind, reward))
+                    .collect()
+            };
+
+            if let Some(signer) = self.signer.read().as_ref() {
+                let our_addr = signer.address();
+                self.validators.on_close_block(&block.header, &our_addr)?
+            }
+
+            block_reward::apply_block_rewards(&rewards, block, &self.machine)?
         }
 
-        block_reward::apply_block_rewards(&rewards, block, &self.machine)
+        Ok(())
     }
 
     fn generate_engine_transactions(

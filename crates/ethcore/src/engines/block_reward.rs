@@ -106,6 +106,14 @@ impl BlockRewardContract {
         Self::new(SystemOrCodeCallKind::Code(code, code_hash))
     }
 
+    /// Returns the address of the block reward contract.
+    pub fn address(&self) -> Option<Address> {
+        match self.kind {
+            SystemOrCodeCallKind::Address(address) => Some(address),
+            _ => None,
+        }
+    }
+
     /// Calls the block reward contract with the given beneficiaries list (and associated reward kind)
     /// and returns the reward allocation (address - value). The block reward contract *must* be
     /// called by the system address so the `caller` must ensure that (e.g. using
