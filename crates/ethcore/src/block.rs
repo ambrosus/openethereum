@@ -262,12 +262,23 @@ impl<'x> OpenBlock<'x> {
         &mut self,
         t: SignedTransaction,
         h: Option<H256>,
+        build: bool,
     ) -> Result<&TypedReceipt, Error> {
         if self.block.transactions_set.contains(&t.hash()) {
             return Err(TransactionError::AlreadyImported.into());
         }
 
-        let env_info = self.block.env_info();
+        let env_info = if build {
+            if let Some(reserved) = self.engine.gas_reserved(&self.block.header) {
+                let mut env_info = self.block.env_info();
+                env_info.gas_limit = env_info.gas_limit.saturating_sub(reserved);
+                env_info
+            } else {
+                self.block.env_info()
+            }
+        } else {
+            self.block.env_info()
+        };
         let outcome = self.block.state.apply(
             &env_info,
             self.engine.machine(),
@@ -294,7 +305,7 @@ impl<'x> OpenBlock<'x> {
     #[cfg(not(feature = "slow-blocks"))]
     fn push_transactions(&mut self, transactions: Vec<SignedTransaction>) -> Result<(), Error> {
         for t in transactions {
-            self.push_transaction(t, None)?;
+            self.push_transaction(t, None, false)?;
         }
         Ok(())
     }
@@ -310,7 +321,7 @@ impl<'x> OpenBlock<'x> {
         for t in transactions {
             let hash = t.hash();
             let start = time::Instant::now();
-            self.push_transaction(t, None)?;
+            self.push_transaction(t, None, false)?;
             let took = start.elapsed();
             let took_ms = took.as_secs() * 1000 + took.subsec_nanos() as u64 / 1000000;
             if took > time::Duration::from_millis(slow_tx) {

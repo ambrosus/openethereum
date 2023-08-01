@@ -214,6 +214,7 @@ where
                 })
                 .sign(kp.secret(), Some(test_spec.chain_id())),
                 None,
+                false,
             )
             .unwrap();
             n += 1;
@@ -299,7 +300,7 @@ pub fn push_block_with_transactions(client: &Arc<Client>, transactions: &[Signed
     b.set_timestamp(block_number * 10);
 
     for t in transactions {
-        b.push_transaction(t.clone(), None).unwrap();
+        b.push_transaction(t.clone(), None, false).unwrap();
     }
     let b = b
         .close_and_lock()

@@ -568,7 +568,7 @@ impl Miner {
             let result = client
                 .verify_for_pending_block(&transaction, &open_block.header)
                 .map_err(|e| e.into())
-                .and_then(|_| open_block.push_transaction(transaction, None));
+                .and_then(|_| open_block.push_transaction(transaction, None, true));
 
             let took = start.elapsed();
 

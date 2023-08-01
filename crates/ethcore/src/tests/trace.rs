@@ -187,6 +187,7 @@ fn can_trace_block_and_uncle_reward() {
                 })
                 .sign(kp.secret(), Some(spec.network_id())),
                 None,
+                false,
             )
             .unwrap();
         n += 1;

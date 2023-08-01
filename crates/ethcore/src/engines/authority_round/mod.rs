@@ -81,6 +81,7 @@ use types::{
     header::{ExtendedHeader, Header},
     ids::BlockId,
     transaction::SignedTransaction,
+    transaction::UnverifiedTransaction,
     BlockNumber,
 };
 use unexpected::{Mismatch, OutOfBounds};
@@ -121,6 +122,8 @@ pub struct AuthorityRoundParams {
     pub block_reward_contract_transitions: BTreeMap<u64, BlockRewardContract>,
     /// Block reward contract mode with their associated starting block numbers.
     pub block_reward_mode_transitions: BTreeMap<u64, u64>,
+    /// Gas recerved for block reward contract call with their associated starting block numbers.
+    pub block_gas_reserved_transitions: BTreeMap<u64, u64>,
     /// Number of accepted uncles transition block.
     pub maximum_uncle_count_transition: u64,
     /// Number of accepted uncles.
@@ -217,6 +220,17 @@ impl From<ethjson::spec::AuthorityRoundParams> for AuthorityRoundParams {
                 )
             })
             .collect();
+        let bgr_transitions: BTreeMap<_, _> = p
+            .block_gas_reserved_transitions
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(block_num, gas_reserved)| {
+                (
+                    block_num.into(),
+                    gas_reserved.into(),
+                )
+            })
+            .collect();
         let randomness_contract_address =
             p.randomness_contract_address
                 .map_or_else(BTreeMap::new, |transitions| {
@@ -267,6 +281,7 @@ impl From<ethjson::spec::AuthorityRoundParams> for AuthorityRoundParams {
             ),
             block_reward_contract_transitions: br_transitions,
             block_reward_mode_transitions: brm_transitions,
+            block_gas_reserved_transitions: bgr_transitions,
             maximum_uncle_count_transition: p.maximum_uncle_count_transition.map_or(0, Into::into),
             maximum_uncle_count: p.maximum_uncle_count.map_or(0, Into::into),
             empty_steps_transition: p
@@ -686,6 +701,7 @@ pub struct AuthorityRound {
     block_reward: BTreeMap<BlockNumber, U256>,
     block_reward_contract_transitions: BTreeMap<u64, BlockRewardContract>,
     block_reward_mode_transitions: BTreeMap<u64, u64>,
+    block_gas_reserved_transitions: BTreeMap<u64, u64>,
     maximum_uncle_count_transition: u64,
     maximum_uncle_count: usize,
     empty_steps_transition: u64,
@@ -1061,6 +1077,7 @@ impl AuthorityRound {
             block_reward: our_params.block_reward,
             block_reward_contract_transitions: our_params.block_reward_contract_transitions,
             block_reward_mode_transitions: our_params.block_reward_mode_transitions,
+            block_gas_reserved_transitions: our_params.block_gas_reserved_transitions,
             maximum_uncle_count_transition: our_params.maximum_uncle_count_transition,
             maximum_uncle_count: our_params.maximum_uncle_count,
             empty_steps_transition: our_params.empty_steps_transition,
@@ -1490,13 +1507,19 @@ fn push_reward_transaction<'a>(
     if block.transactions_set.contains(&t.hash()) {
         return Err(TransactionError::AlreadyImported.into());
     }
+    let tx: &UnverifiedTransaction = &*t;
+    let gas = if let TypedTransaction::Legacy(txl) = tx.as_unsigned() {
+                txl.gas
+            } else {
+                U256::zero()
+            };
 
     let env_info = {
         let mut env_info = block.env_info();
-        env_info.gas_limit = env_info.gas_used.saturating_add(10_000_000.into());
+        env_info.gas_limit = env_info.gas_limit.saturating_add(gas);
         env_info
     };
-
+    // let gas_used = env_info.gas_used;
     let outcome = block.state.apply(
         &env_info,
         machine,
@@ -1511,6 +1534,7 @@ fn push_reward_transaction<'a>(
     if let Tracing::Enabled(ref mut traces) = block.traces {
         traces.push(outcome.trace.into());
     }
+    // let mut recept = outcome.receipt.receipt_mut();
     block.receipts.push(outcome.receipt);
     Ok(block
         .receipts
@@ -1531,6 +1555,34 @@ impl Engine<EthereumMachine> for AuthorityRound {
     /// step messages (which should be empty if no steps are skipped)
     fn seal_fields(&self, header: &Header) -> usize {
         header_expected_seal_fields(header, self.empty_steps_transition)
+    }
+
+    fn gas_reserved(&self, header: &Header) -> Option<U256> {
+        let block_reward_mode_transition = self
+            .block_reward_mode_transitions
+            .range(..=header.number())
+            .last();
+
+        let reward_mode = if let Some((_, mode)) = block_reward_mode_transition {
+            *mode
+        } else {
+            0
+        };
+
+        if reward_mode == 0 {
+            return None
+        }
+
+        let block_gas_reserved_transition = self
+            .block_gas_reserved_transitions
+            .range(..=header.number())
+            .last();
+
+        if let Some((_, gas)) = block_gas_reserved_transition {
+            Some(U256::from(*gas))
+        } else {
+            None
+        }
     }
 
     fn step(&self) {
@@ -1949,10 +2001,22 @@ impl Engine<EthereumMachine> for AuthorityRound {
                     }) {
                         if self.sealing_state() == SealingState::Ready {
                             info!(target: "engine", "push_reward_transaction.");
+
+                            let block_gas_reserved_transition = self
+                                .block_gas_reserved_transitions
+                                .range(..=block.header.number())
+                                .last();
+
+                            let gas = if let Some((_, gas)) = block_gas_reserved_transition {
+                                *gas
+                            } else {
+                                1_000_000
+                            };
+
                             let t = TypedTransaction::Legacy(Transaction {
                                 nonce: block.state.nonce(&author).unwrap(),
                                 gas_price: U256::zero(),
-                                gas: 10_000_000.into(),
+                                gas: U256::from(gas),
                                 action: Action::Call(address),
                                 value: U256::zero(),
                                 data: vec![0xc3, 0x3f, 0xb8, 0x77],
@@ -1962,9 +2026,11 @@ impl Engine<EthereumMachine> for AuthorityRound {
 
                             if let Some(signer) = self.signer.read().as_ref() {
                                 let signature = signer.sign(t.signature_hash(Some(chain_id))).unwrap();
-                                let t = SignedTransaction::new(t.with_signature(signature, Some(chain_id)))?;
+                                let tx = SignedTransaction::new(t.with_signature(signature, Some(chain_id)))?;
 
-                                push_reward_transaction(&self.machine, block, t, None)?;
+                                if let Err(e) = push_reward_transaction(&self.machine, block, tx, None) {
+                                    info!(target: "engine", "push_reward_transaction: {:?}", e);
+                                }
 
                                 let our_addr = signer.address();
                                 self.validators.on_close_block(&block.header, &our_addr)?
@@ -3187,6 +3253,7 @@ mod tests {
             })
             .fake_sign(addr2),
             None,
+            false,
         )
         .unwrap();
         let b2 = b2.close_and_lock().unwrap();

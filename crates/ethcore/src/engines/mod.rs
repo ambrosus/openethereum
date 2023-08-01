@@ -329,6 +329,11 @@ pub trait Engine<M: Machine>: Sync + Send {
         None
     }
 
+    /// Optional gas reserved.
+    fn gas_reserved(&self, _header: &Header) -> Option<U256> {
+        None
+    }
+
     /// Block transformation functions, before the transactions.
     /// `epoch_begin` set to true if this block kicks off an epoch.
     fn on_new_block(

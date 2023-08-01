@@ -82,6 +82,8 @@ pub struct AuthorityRoundParams {
     pub block_reward_contract_transitions: Option<BTreeMap<Uint, Address>>,
     /// Block reward mode. This overrides the block reward contract mode.
     pub block_reward_mode_transitions: Option<BTreeMap<Uint, Uint>>,
+    /// Gas recerved for block reward contract call with their associated starting block numbers.
+    pub block_gas_reserved_transitions: Option<BTreeMap<u64, u64>>,
     /// Block reward code. This overrides the block reward contract address.
     pub block_reward_contract_code: Option<Bytes>,
     /// Block at which maximum uncle count should be considered.
