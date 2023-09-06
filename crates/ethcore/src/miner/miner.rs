@@ -237,7 +237,7 @@ struct SealingWork {
 impl SealingWork {
     /// Are we allowed to do a non-mandatory reseal?
     fn reseal_allowed(&self) -> bool {
-        Instant::now() > self.next_allowed_reseal
+        Instant::now() >= self.next_allowed_reseal
     }
 }
 
