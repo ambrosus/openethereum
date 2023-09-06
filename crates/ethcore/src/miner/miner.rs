@@ -237,7 +237,7 @@ struct SealingWork {
 impl SealingWork {
     /// Are we allowed to do a non-mandatory reseal?
     fn reseal_allowed(&self) -> bool {
-        Instant::now().duration_since(self.next_allowed_reseal).as_secs() == 0
+        Instant::now() >= self.next_allowed_reseal
     }
 }
 
@@ -728,7 +728,7 @@ impl Miner {
             false
         } else {
             // sealing enabled and we don't want to sleep.
-            sealing.next_allowed_reseal = Instant::now() + self.options.reseal_min_period;
+            sealing.next_allowed_reseal = Instant::now(); // + self.options.reseal_min_period;
             true
         }
     }
