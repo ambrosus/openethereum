@@ -691,7 +691,7 @@ impl Miner {
         }
 
         if !sealing.reseal_allowed() {
-            trace!(target: "miner", "requires_reseal: reseal too early");
+            trace!(target: "miner", "requires_reseal: reseal too early, next allowed reseal {:?}", sealing.next_allowed_reseal);
             return false;
         }
 
