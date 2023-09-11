@@ -57,7 +57,7 @@ Follow these steps to compile and install AirDAO (ex Ambrosus) OpenEthereum:
    cargo build --release --features final --target x86_64-unknown-linux-gnu
    ```
 
-8. 
+8. Create config dir
 
    ```shell
    mkdir app
