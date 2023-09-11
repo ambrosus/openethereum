@@ -12,9 +12,7 @@ Before you begin, ensure that you have the following prerequisites:
 ## Installation Steps
 
 Follow these steps to compile and install AirDAO (ex Ambrosus) OpenEthereum:
-   ```shell
-   
-   ```
+
 1. Update your package list:
 
    ```shell
