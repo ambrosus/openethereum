@@ -84,7 +84,7 @@ Follow these steps to compile and install AirDAO (ex Ambrosus) OpenEthereum:
     ```
     and put this configuration in it 
 
-    "base_path" and "chanin" need to use an absolute path ( use pwd while being in the /app/ directory )
+    "base_path" and "chain" need to use an absolute path ( use pwd while being in the /app/ directory )
     ```shell
       [parity]
       base_path = "/root/openethereum/app/"
