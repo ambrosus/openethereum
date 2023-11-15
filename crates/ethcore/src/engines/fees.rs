@@ -1,10 +1,12 @@
 // TODO: implement the interface to call the fees contract
 
-use ethabi;
+use ethabi::{self, ParamType};
 use ethereum_types::{Address, U256};
 
 use super::{SystemOrCodeCall, SystemOrCodeCallKind};
 use hash::keccak;
+use std::sync::Arc;
+use error::Error;
 
 use_contract!(fees_contract, "res/contracts/fees.json");
 
@@ -39,7 +41,7 @@ impl FeesContract {
         }
     }
 
-    pub fn get_gas_price(&self, caller: &mut SystemOrCodeCall) -> Result<U256> {
+    pub fn get_gas_price(&self, caller: &mut SystemOrCodeCall) -> Result<U256, Error> {
         let input = fees_contract::functions::get_gas_price::encode_input();
 
         let output = caller(self.kind.clone(), input)
@@ -54,7 +56,10 @@ impl FeesContract {
 
         assert!(tokens.len() == 1);
 
-        let gas_price = tokens[0].into_uint()?;
+        let gas_price = tokens[0]
+            .clone()
+            .to_uint()
+            .expect("type checked by ethabi::decode");
 
         Ok(gas_price)
     }
@@ -62,12 +67,12 @@ impl FeesContract {
     pub fn get_pay_address_and_fee_percent(
         &self,
         caller: &mut SystemOrCodeCall,
-    ) -> Result<(Address, U256)> {
+    ) -> Result<(Address, U256), Error> {
         let input = fees_contract::functions::get_pay_addres_and_fee_percent::encode_input();
 
         let output = caller(self.kind.clone(), input)
             .map_err(Into::into)
-            .map_err(::engine::EngineError::FailedSystemCall)?;
+            .map_err(::engines::EngineError::FailedSystemCall)?;
 
         let types = &[ParamType::Address, ParamType::Uint(256)];
 
@@ -77,8 +82,14 @@ impl FeesContract {
 
         assert!(output.len() == 2);
 
-        let address = tokens[0].into_address()?;
-        let percent = tokens[1].into_uint()?;
+        let address = tokens[0]
+            .clone()
+            .to_address()
+            .expect("type checked by ethabi::decode");
+        let percent = tokens[1]
+            .clone()
+            .to_uint()
+            .expect("type checked by ethabi::decode");
 
         Ok((address, percent))
     }
