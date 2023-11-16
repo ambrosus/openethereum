@@ -113,6 +113,7 @@ This guide provides instructions for updating the OpenEthereum container version
 
 
 1. Stop the Running Container
+
 First, stop your currently running OpenEthereum container
 
 ```shell
@@ -120,6 +121,7 @@ docker stop [container_name]
 ```
 
 2. Update the Container Version
+
 Pull the new version of the container from Docker hub or your registry.
 
 ```shell
@@ -127,6 +129,7 @@ docker pull [container_name]:v3.3.3-amb1.2.2.6
 ```
 
 3. Update chain.json
+
 Edit the chain.json file to include the necessary updates for the new OpenEthereum version.
 
 ```shell
@@ -134,11 +137,13 @@ curl -o chain.json https://chainspec.ambrosus.io/
 ```
 
 4. Restart the Container
+
 Finally, restart the container with the updated version.
 
 ```shell
 docker start [container_name]
 ```
 Notes
+
 Replace [container_name] and [new_version_tag] with your specific container name and version tag.
 
