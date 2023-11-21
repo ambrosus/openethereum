@@ -46,7 +46,9 @@ use std::{
 };
 
 use self::finality::RollingFinality;
+use self::util::CallError;
 use super::{
+    fees::fees_contract,
     signer::EngineSigner,
     validator_set::{new_validator_set_posdao, SimpleList, ValidatorSet},
     EthEngine,
@@ -86,11 +88,11 @@ use types::{
 };
 use unexpected::{Mismatch, OutOfBounds};
 
+use trace::Tracing;
 use types::{
-    receipt::{TypedReceipt},
+    receipt::TypedReceipt,
     transaction::{Action, Error as TransactionError, Transaction, TypedTransaction},
 };
-use trace::Tracing;
 
 //mod block_gas_limit as crate_block_gas_limit;
 mod finality;
@@ -144,6 +146,8 @@ pub struct AuthorityRoundParams {
     /// If set, this is the block number at which the consensus engine switches from AuRa to AuRa
     /// with POSDAO modifications.
     pub posdao_transition: Option<BlockNumber>,
+    /// Fees contract addresses with their associated starting block numbers.
+    pub fees_contract_transitions: BTreeMap<u64, Address>,
 }
 
 const U16_MAX: usize = ::std::u16::MAX as usize;
@@ -209,27 +213,18 @@ impl From<ethjson::spec::AuthorityRoundParams> for AuthorityRoundParams {
                 BlockRewardContract::new_from_address(address.into()),
             );
         }
+
         let brm_transitions: BTreeMap<_, _> = p
             .block_reward_mode_transitions
             .unwrap_or_default()
             .into_iter()
-            .map(|(block_num, reward_mode)| {
-                (
-                    block_num.into(),
-                    reward_mode.into(),
-                )
-            })
+            .map(|(block_num, reward_mode)| (block_num.into(), reward_mode.into()))
             .collect();
         let bgr_transitions: BTreeMap<_, _> = p
             .block_gas_reserved_transitions
             .unwrap_or_default()
             .into_iter()
-            .map(|(block_num, gas_reserved)| {
-                (
-                    block_num.into(),
-                    gas_reserved.into(),
-                )
-            })
+            .map(|(block_num, gas_reserved)| (block_num.into(), gas_reserved.into()))
             .collect();
         let randomness_contract_address =
             p.randomness_contract_address
@@ -241,6 +236,12 @@ impl From<ethjson::spec::AuthorityRoundParams> for AuthorityRoundParams {
                 });
         let block_gas_limit_contract_transitions: BTreeMap<_, _> = p
             .block_gas_limit_contract_transitions
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(block_num, address)| (block_num.into(), address.into()))
+            .collect();
+        let fees_transitions: BTreeMap<_, _> = p
+            .fees_contract_transitions
             .unwrap_or_default()
             .into_iter()
             .map(|(block_num, address)| (block_num.into(), address.into()))
@@ -295,6 +296,7 @@ impl From<ethjson::spec::AuthorityRoundParams> for AuthorityRoundParams {
             randomness_contract_address,
             block_gas_limit_contract_transitions,
             posdao_transition: p.posdao_transition.map(Into::into),
+            fees_contract_transitions: fees_transitions,
         }
     }
 }
@@ -721,6 +723,7 @@ pub struct AuthorityRound {
     /// modifications. For details about POSDAO, see the whitepaper:
     /// https://www.xdaichain.com/for-validators/posdao-whitepaper
     posdao_transition: Option<BlockNumber>,
+    fees_contract_transitions: BTreeMap<u64, Address>,
 }
 
 // header-chain validator.
@@ -1090,6 +1093,7 @@ impl AuthorityRound {
             block_gas_limit_contract_transitions: our_params.block_gas_limit_contract_transitions,
             gas_limit_override_cache: Mutex::new(LruCache::new(GAS_LIMIT_OVERRIDE_CACHE_CAPACITY)),
             posdao_transition: our_params.posdao_transition,
+            fees_contract_transitions: our_params.fees_contract_transitions,
         });
 
         // Do not initialize timeouts for tests.
@@ -1103,6 +1107,23 @@ impl AuthorityRound {
                 .register_handler(Arc::new(handler))?;
         }
         Ok(engine)
+    }
+
+    // call fees contract's to get the actual gas price. Uses the latest block id
+    pub fn get_gas_price(&self) -> Result<U256, Error> {
+        let client = self.upgrade_client_or("Failed to get gas price")?;
+        let (block_id, address) = self
+            .fees_contract_transitions
+            .iter()
+            .next_back()
+            .ok_or("Failed to get gas price")?;
+        let contract = util::BoundContract::new(&*client, BlockId::Number(*block_id), *address);
+        let gas_price = contract.call_const(fees_contract::functions::get_gas_price::call());
+        if let Ok(gas_price) = gas_price {
+            Ok(gas_price)
+        } else {
+            Err("The call error occured".into())
+        }
     }
 
     // fetch correct validator set for epoch at header, taking into account
@@ -1509,10 +1530,10 @@ fn push_reward_transaction<'a>(
     }
     let tx: &UnverifiedTransaction = &*t;
     let gas = if let TypedTransaction::Legacy(txl) = tx.as_unsigned() {
-                txl.gas
-            } else {
-                U256::zero()
-            };
+        txl.gas
+    } else {
+        U256::zero()
+    };
 
     let env_info = {
         let mut env_info = block.env_info();
@@ -1520,26 +1541,18 @@ fn push_reward_transaction<'a>(
         env_info
     };
     // let gas_used = env_info.gas_used;
-    let outcome = block.state.apply(
-        &env_info,
-        machine,
-        &t,
-        block.traces.is_enabled(),
-    )?;
+    let outcome = block
+        .state
+        .apply(&env_info, machine, &t, block.traces.is_enabled())?;
 
-    block
-        .transactions_set
-        .insert(h.unwrap_or_else(|| t.hash()));
+    block.transactions_set.insert(h.unwrap_or_else(|| t.hash()));
     block.transactions.push(t.into());
     if let Tracing::Enabled(ref mut traces) = block.traces {
         traces.push(outcome.trace.into());
     }
     // let mut recept = outcome.receipt.receipt_mut();
     block.receipts.push(outcome.receipt);
-    Ok(block
-        .receipts
-        .last()
-        .expect("receipt just pushed; qed"))
+    Ok(block.receipts.last().expect("receipt just pushed; qed"))
 }
 
 impl Engine<EthereumMachine> for AuthorityRound {
@@ -1570,7 +1583,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
         };
 
         if reward_mode == 0 {
-            return None
+            return None;
         }
 
         let block_gas_reserved_transition = self
@@ -1911,7 +1924,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
         epoch_begin: bool,
         _ancestry: &mut dyn Iterator<Item = ExtendedHeader>,
     ) -> Result<(), Error> {
-        // with immediate transitions, we don't use the epoch mechanism anyway.
+        // with immediate transitions, we don't use the epoch mechreturn Error(anism anyway.
         // the genesis is always considered an epoch, but we ignore it intentionally.
         if self.immediate_transitions || !epoch_begin {
             return Ok(());
@@ -1997,7 +2010,13 @@ impl Engine<EthereumMachine> for AuthorityRound {
                 if let Some(address) = contract.address() {
                     if !block.transactions.iter().any(|tx| {
                         let utx = tx.unsigned.tx();
-                        utx.action == Action::Call(address) && utx.data.len() == 4 && utx.data[0] == 0xc3 && utx.data[1] == 0x3f && utx.data[2] == 0xb8 && utx.data[3] == 0x77 && public_to_address(&tx.recover_public().unwrap()) == author
+                        utx.action == Action::Call(address)
+                            && utx.data.len() == 4
+                            && utx.data[0] == 0xc3
+                            && utx.data[1] == 0x3f
+                            && utx.data[2] == 0xb8
+                            && utx.data[3] == 0x77
+                            && public_to_address(&tx.recover_public().unwrap()) == author
                     }) {
                         if self.sealing_state() == SealingState::Ready {
                             info!(target: "engine", "push_reward_transaction.");
@@ -2025,10 +2044,15 @@ impl Engine<EthereumMachine> for AuthorityRound {
                             let chain_id = self.machine.params().chain_id;
 
                             if let Some(signer) = self.signer.read().as_ref() {
-                                let signature = signer.sign(t.signature_hash(Some(chain_id))).unwrap();
-                                let tx = SignedTransaction::new(t.with_signature(signature, Some(chain_id)))?;
+                                let signature =
+                                    signer.sign(t.signature_hash(Some(chain_id))).unwrap();
+                                let tx = SignedTransaction::new(
+                                    t.with_signature(signature, Some(chain_id)),
+                                )?;
 
-                                if let Err(e) = push_reward_transaction(&self.machine, block, tx, None) {
+                                if let Err(e) =
+                                    push_reward_transaction(&self.machine, block, tx, None)
+                                {
                                     info!(target: "engine", "push_reward_transaction: {:?}", e);
                                 }
 
@@ -2306,7 +2330,8 @@ impl Engine<EthereumMachine> for AuthorityRound {
         }
 
         let first = header.number() == 0;
-        self.validators.signals_epoch_end(first, header, aux, self.machine())
+        self.validators
+            .signals_epoch_end(first, header, aux, self.machine())
     }
 
     fn is_epoch_end(
