@@ -561,6 +561,11 @@ pub trait Engine<M: Machine>: Sync + Send {
     fn gas_limit_override(&self, _header: &Header) -> Option<U256> {
         None
     }
+
+    /// Return the gas price for the block using the fees contract
+    fn current_gas_price(&self, _block: &mut ExecutedBlock) -> Option<U256> {
+        None
+    }
 }
 
 /// t_nb 9.3 Check whether a given block is the best block based on the default total difficulty rule.

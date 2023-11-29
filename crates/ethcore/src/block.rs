@@ -404,6 +404,11 @@ impl<'x> OpenBlock<'x> {
         Ok(LockedBlock { block: s.block })
     }
 
+    /// Returns the current gas price from the fees contract
+    pub fn current_gas_price(&mut self) -> Option<U256> {
+        self.engine.current_gas_price(&mut self.block)
+    }
+
     #[cfg(test)]
     /// Return mutable block reference. To be used in tests only.
     pub fn block_mut(&mut self) -> &mut ExecutedBlock {

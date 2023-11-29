@@ -46,9 +46,8 @@ use std::{
 };
 
 use self::finality::RollingFinality;
-use self::util::CallError;
 use super::{
-    fees::fees_contract,
+    fees::FeesContract,
     signer::EngineSigner,
     validator_set::{new_validator_set_posdao, SimpleList, ValidatorSet},
     EthEngine,
@@ -147,7 +146,7 @@ pub struct AuthorityRoundParams {
     /// with POSDAO modifications.
     pub posdao_transition: Option<BlockNumber>,
     /// Fees contract addresses with their associated starting block numbers.
-    pub fees_contract_transitions: BTreeMap<u64, Address>,
+    pub fees_contract_transitions: BTreeMap<u64, FeesContract>,
 }
 
 const U16_MAX: usize = ::std::u16::MAX as usize;
@@ -244,7 +243,12 @@ impl From<ethjson::spec::AuthorityRoundParams> for AuthorityRoundParams {
             .fees_contract_transitions
             .unwrap_or_default()
             .into_iter()
-            .map(|(block_num, address)| (block_num.into(), address.into()))
+            .map(|(block_num, address)| {
+                (
+                    block_num.into(),
+                    FeesContract::new_from_address(address.into()),
+                )
+            })
             .collect();
         AuthorityRoundParams {
             step_durations,
@@ -723,7 +727,7 @@ pub struct AuthorityRound {
     /// modifications. For details about POSDAO, see the whitepaper:
     /// https://www.xdaichain.com/for-validators/posdao-whitepaper
     posdao_transition: Option<BlockNumber>,
-    fees_contract_transitions: BTreeMap<u64, Address>,
+    fees_contract_transitions: BTreeMap<u64, FeesContract>,
 }
 
 // header-chain validator.
@@ -1109,22 +1113,8 @@ impl AuthorityRound {
         Ok(engine)
     }
 
+    //TODO: Remove this function
     // call fees contract's to get the actual gas price. Uses the latest block id
-    pub fn get_gas_price(&self) -> Result<U256, Error> {
-        let client = self.upgrade_client_or("Failed to get gas price")?;
-        let (block_id, address) = self
-            .fees_contract_transitions
-            .iter()
-            .next_back()
-            .ok_or("Failed to get gas price")?;
-        let contract = util::BoundContract::new(&*client, BlockId::Number(*block_id), *address);
-        let gas_price = contract.call_const(fees_contract::functions::get_gas_price::call());
-        if let Ok(gas_price) = gas_price {
-            Ok(gas_price)
-        } else {
-            Err("The call error occured".into())
-        }
-    }
 
     // fetch correct validator set for epoch at header, taking into account
     // finality of previous transitions.
@@ -1924,7 +1914,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
         epoch_begin: bool,
         _ancestry: &mut dyn Iterator<Item = ExtendedHeader>,
     ) -> Result<(), Error> {
-        // with immediate transitions, we don't use the epoch mechreturn Error(anism anyway.
+        // with immediate transitions, we don't use the epoch mechanism anyway.
         // the genesis is always considered an epoch, but we ignore it intentionally.
         if self.immediate_transitions || !epoch_begin {
             return Ok(());
@@ -2526,6 +2516,25 @@ impl Engine<EthereumMachine> for AuthorityRound {
             .insert(header.hash(), limit);
         limit
     }
+
+    //TODO: Add docs
+    //TODO: Add get_gas_price impl
+    fn current_gas_price(&self, block: &mut ExecutedBlock) -> Option<U256> {
+        let fees_contract_transition = self
+            .fees_contract_transitions
+            .range(..=block.header.number())
+            .last();
+
+        if let Some((_, contract)) = fees_contract_transition {
+            let mut call = crate::engines::default_system_or_code_call(&self.machine, block);
+            let gas_price = contract
+                .get_gas_price(&mut call)
+                .expect("Failed to get gas_price");
+            return Some(gas_price);
+        } else {
+            return None;
+        }
+    }
 }
 
 /// A helper accumulator function mapping a step duration and a step duration transition timestamp
@@ -2584,6 +2593,7 @@ mod tests {
         transaction::{Action, Transaction, TypedTransaction},
     };
 
+    //TODO: Fix tests
     fn aura<F>(f: F) -> Arc<AuthorityRound>
     where
         F: FnOnce(&mut AuthorityRoundParams),
