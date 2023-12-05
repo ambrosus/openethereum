@@ -6,21 +6,15 @@
         "stepDuration": "5",
         "blockRewardContractAddress": "0x0000000000000000000000000000000000000F01",
         "blockRewardContractTransition": "0x0",
-        "blockRewardContractTransitions": {
-          "15": "0x9e4D66bdF08FF38A75C619A345007Ca5eb9A2e05"
-        },
-        "blockRewardModeTransitions": {
-          "15": "1"
+        "feesContractTransitions": {
+          "100": "0x2C6808Be96aB532DA69d09137E4632C8C513A33B"
         },
         "validators": {
-          "multi": {
-            "0": {
-              "safeContract": "0x0000000000000000000000000000000000000F00"
-            },
-            "15": {
-              "safeContract": "0x9e4D66bdF08FF38A75C619A345007Ca5eb9A2e05"
-            }
-          }
+          "list": [
+            "0x4c9785451bb2CA3E91B350C06bcB5f974cA33F79",
+            "0x90B2Ce3741188bCFCe25822113e93983ecacfcA0",
+            "0xAccdb7a2268BC4Af0a1898e725138888ba1Ca6Fc"
+          ]
         }
       }
     }
