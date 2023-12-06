@@ -466,6 +466,7 @@ impl EpochManager {
         &mut self,
         client: &dyn EngineClient,
         machine: &EthereumMachine,
+        engine: &dyn EthEngine,
         validators: &dyn ValidatorSet,
         hash: H256,
     ) -> bool {
@@ -510,6 +511,7 @@ impl EpochManager {
                 .epoch_set(
                     first,
                     machine,
+                    engine,
                     signal_number, // use signal number so multi-set first calculation is correct.
                     set_proof,
                 )
@@ -1131,6 +1133,7 @@ impl AuthorityRound {
             if !epoch_manager.zoom_to_after(
                 &*client,
                 &self.machine,
+                self,
                 &*self.validators,
                 *header.parent_hash(),
             ) {
@@ -1271,6 +1274,7 @@ impl AuthorityRound {
         if !epoch_manager.zoom_to_after(
             &*client,
             &self.machine,
+            self,
             &*self.validators,
             *chain_head.parent_hash(),
         ) {
@@ -1511,6 +1515,7 @@ impl IoHandler<()> for TransitionHandler {
 
 fn push_reward_transaction<'a>(
     machine: &EthereumMachine,
+    engine: &dyn EthEngine,
     block: &'a mut ExecutedBlock,
     t: SignedTransaction,
     h: Option<H256>,
@@ -1533,7 +1538,7 @@ fn push_reward_transaction<'a>(
     // let gas_used = env_info.gas_used;
     let outcome = block
         .state
-        .apply(&env_info, machine, &t, block.traces.is_enabled())?;
+        .apply(&env_info, machine, engine, &t, block.traces.is_enabled())?;
 
     block.transactions_set.insert(h.unwrap_or_else(|| t.hash()));
     block.transactions.push(t.into());
@@ -1698,6 +1703,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
             if !epoch_manager.zoom_to_after(
                 &*client,
                 &self.machine,
+                self,
                 &*self.validators,
                 parent.hash(),
             ) {
@@ -1737,6 +1743,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
             if !epoch_manager.zoom_to_after(
                 &*client,
                 &self.machine,
+                self,
                 &*self.validators,
                 parent.hash(),
             ) {
@@ -2041,7 +2048,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
                                 )?;
 
                                 if let Err(e) =
-                                    push_reward_transaction(&self.machine, block, tx, None)
+                                    push_reward_transaction(&self.machine, self, block, tx, None)
                                 {
                                     info!(target: "engine", "push_reward_transaction: {:?}", e);
                                 }
@@ -2422,7 +2429,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
         let first = signal_number == 0;
         match self
             .validators
-            .epoch_set(first, &self.machine, signal_number, set_proof)
+            .epoch_set(first, &self.machine, self, signal_number, set_proof)
         {
             Ok((list, finalize)) => {
                 let verifier = Box::new(EpochVerifier {
@@ -2517,8 +2524,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
         limit
     }
 
-    //TODO: Add docs
-    //TODO: Add get_gas_price impl
+    /// Returns the gas price for the block calling the fees contract
     fn current_gas_price(&self, block: &mut ExecutedBlock) -> Option<U256> {
         let fees_contract_transition = self
             .fees_contract_transitions
@@ -2533,6 +2539,32 @@ impl Engine<EthereumMachine> for AuthorityRound {
             return Some(gas_price);
         } else {
             return None;
+        }
+    }
+
+    /// Return the params for the new transaction fee reward
+    fn current_fees_params(
+        &self,
+        block_number: BlockNumber,
+    ) -> Option<crate::executive::FeesParams> {
+        let fees_contract_transition = self.fees_contract_transitions.range(..=block_number).last();
+
+        if let Some((_, contract)) = fees_contract_transition {
+            match self.upgrade_client_or("Failed to call fees contract") {
+                Ok(client) => {
+                    let result = contract
+                        .get_fees_params(&*client, BlockId::Number(block_number))
+                        .expect("Failed to get gas_price");
+                    let fees_params = crate::executive::FeesParams {
+                        address: result.0,
+                        governance_part: result.1,
+                    };
+                    Some(fees_params)
+                }
+                _ => None,
+            }
+        } else {
+            None
         }
     }
 }

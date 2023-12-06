@@ -18,6 +18,8 @@ use ethereum_types::{Address, H256};
 /// Preconfigured validator list.
 use parity_util_mem::MallocSizeOf;
 
+use crate::engines::EthEngine;
+
 use super::{SystemCall, ValidatorSet};
 use bytes::Bytes;
 use error::Error as EthcoreError;
@@ -99,6 +101,7 @@ impl ValidatorSet for SimpleList {
         &self,
         _first: bool,
         _: &EthereumMachine,
+        _: &dyn EthEngine,
         _: BlockNumber,
         _: &[u8],
     ) -> Result<(SimpleList, Option<H256>), ::error::Error> {

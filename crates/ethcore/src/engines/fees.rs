@@ -2,8 +2,11 @@
 //! The contract holding information about gas price and fees addressuse super::{SystemOrCodeCallKind};
 
 use ethereum_types::{Address, U256};
+use types::ids::BlockId;
 
-use super::{SystemOrCodeCall, SystemOrCodeCallKind};
+use crate::client::EngineClient;
+
+use super::{authority_round::util::BoundContract, SystemOrCodeCall, SystemOrCodeCallKind};
 use error::Error;
 
 use_contract!(fees_contract, "res/contracts/fees.json");
@@ -44,5 +47,28 @@ impl FeesContract {
         Ok(price)
     }
 
-    //TODO: Create function to get the pay address
+    /// Returns the params for the new transaction fee reward
+    pub fn get_fees_params(
+        &self,
+        client: &dyn EngineClient,
+        block_id: BlockId,
+    ) -> Result<(Address, U256), Error> {
+        match self.kind {
+            SystemOrCodeCallKind::Address(address) => {
+                let contract = BoundContract::new(client, block_id, address);
+                let result = contract
+                    .call_const(fees_contract::functions::get_fees_params::call())
+                    .map_err(|_| {
+                        ::engines::EngineError::FailedSystemCall(
+                            "Failed to call fees contract".to_string(),
+                        )
+                    })?;
+                Ok(result)
+            }
+            _ => Err(::engines::EngineError::FailedSystemCall(
+                "Failed to call fees contract".to_string(),
+            )
+            .into()),
+        }
+    }
 }

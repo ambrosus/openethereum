@@ -802,7 +802,10 @@ impl Importer {
             receipts: Some(&receipts),
         };
 
-        match self.engine.signals_epoch_end(header, auxiliary, self.engine.machine()) {
+        match self
+            .engine
+            .signals_epoch_end(header, auxiliary, self.engine.machine())
+        {
             EpochChange::Yes(proof) => {
                 use engines::Proof;
                 let proof = match proof {
@@ -840,8 +843,9 @@ impl Importer {
                             let options = TransactOptions::with_no_tracing().dont_check_nonce();
                             let machine = self.engine.machine();
                             let schedule = machine.schedule(env_info.number);
+                            let fees_params = self.engine.current_fees_params(header.number());
                             let res = Executive::new(&mut state, &env_info, &machine, &schedule)
-                                .transact(&transaction, options);
+                                .transact(&transaction, options, fees_params);
 
                             let res = match res {
                                 Err(e) => {
@@ -1611,6 +1615,7 @@ impl Client {
     }
 
     fn do_virtual_call(
+        engine: &dyn EthEngine,
         machine: &::machine::EthereumMachine,
         env_info: &EnvInfo,
         state: &mut State<StateDB>,
@@ -1620,6 +1625,7 @@ impl Client {
         fn call<V, T>(
             state: &mut State<StateDB>,
             env_info: &EnvInfo,
+            engine: &dyn EthEngine,
             machine: &::machine::EthereumMachine,
             state_diff: bool,
             transaction: &SignedTransaction,
@@ -1637,8 +1643,13 @@ impl Client {
             };
             let schedule = machine.schedule(env_info.number);
 
-            let mut ret = Executive::new(state, env_info, &machine, &schedule)
-                .transact_virtual(transaction, options)?;
+            let fees_params = engine.current_fees_params(env_info.number);
+
+            let mut ret = Executive::new(state, env_info, &machine, &schedule).transact_virtual(
+                transaction,
+                options,
+                fees_params,
+            )?;
 
             if let Some(original) = original_state {
                 ret.state_diff = Some(state.diff_from(original).map_err(ExecutionError::from)?);
@@ -1652,6 +1663,7 @@ impl Client {
             (true, true) => call(
                 state,
                 env_info,
+                engine,
                 machine,
                 state_diff,
                 t,
@@ -1660,6 +1672,7 @@ impl Client {
             (true, false) => call(
                 state,
                 env_info,
+                engine,
                 machine,
                 state_diff,
                 t,
@@ -1668,6 +1681,7 @@ impl Client {
             (false, true) => call(
                 state,
                 env_info,
+                engine,
                 machine,
                 state_diff,
                 t,
@@ -1676,6 +1690,7 @@ impl Client {
             (false, false) => call(
                 state,
                 env_info,
+                engine,
                 machine,
                 state_diff,
                 t,
@@ -2007,8 +2022,9 @@ impl Call for Client {
             },
         };
         let machine = self.engine.machine();
+        let engine = self.engine();
 
-        Self::do_virtual_call(&machine, &env_info, state, transaction, analytics)
+        Self::do_virtual_call(engine, &machine, &env_info, state, transaction, analytics)
     }
 
     fn call_many(
@@ -2030,6 +2046,7 @@ impl Call for Client {
 
         let mut results = Vec::with_capacity(transactions.len());
         let machine = self.engine.machine();
+        let engine = self.engine();
 
         for &(ref t, analytics) in transactions {
             //if gas pricing is not defined, force base_fee to zero
@@ -2039,7 +2056,7 @@ impl Call for Client {
                 env_info.base_fee = header.base_fee()
             }
 
-            let ret = Self::do_virtual_call(machine, &env_info, state, t, analytics)?;
+            let ret = Self::do_virtual_call(engine, machine, &env_info, state, t, analytics)?;
             env_info.gas_used = ret.cumulative_gas_used;
             results.push(ret);
         }
@@ -2077,6 +2094,7 @@ impl Call for Client {
 
         let sender = t.sender();
         let options = || TransactOptions::with_tracing().dont_check_nonce();
+        let fees_params = || self.engine.current_fees_params(header.number());
 
         let exec = |gas| {
             let mut tx = t.as_unsigned().clone();
@@ -2086,8 +2104,11 @@ impl Call for Client {
             let mut clone = state.clone();
             let machine = self.engine.machine();
             let schedule = machine.schedule(env_info.number);
-            Executive::new(&mut clone, &env_info, &machine, &schedule)
-                .transact_virtual(&tx, options())
+            Executive::new(&mut clone, &env_info, &machine, &schedule).transact_virtual(
+                &tx,
+                options(),
+                fees_params(),
+            )
         };
 
         let cond = |gas| exec(gas).ok().map_or(false, |r| r.exception.is_none());
@@ -2196,7 +2217,7 @@ impl BlockChainClient for Client {
             let transaction_hash = t.hash();
             let t = SignedTransaction::new(t).expect(PROOF);
             let machine = engine.machine();
-            let x = Self::do_virtual_call(machine, &env_info, &mut state, &t, analytics)
+            let x = Self::do_virtual_call(&*engine, machine, &env_info, &mut state, &t, analytics)
                 .expect(EXECUTE_PROOF);
             env_info.gas_used = env_info.gas_used + x.gas_used;
             (transaction_hash, x)
@@ -3189,6 +3210,7 @@ impl ProvingBlockChainClient for Client {
             header.state_root().clone(),
             &transaction,
             self.engine.machine(),
+            self.engine(),
             &env_info,
             self.factories.clone(),
         )

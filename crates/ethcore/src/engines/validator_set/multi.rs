@@ -23,6 +23,8 @@ use ethereum_types::{Address, H256};
 use parking_lot::RwLock;
 use types::{header::Header, ids::BlockId, BlockNumber};
 
+use crate::engines::EthEngine;
+
 use super::{SystemCall, ValidatorSet};
 use client::EngineClient;
 use error::Error as EthcoreError;
@@ -148,13 +150,14 @@ impl ValidatorSet for Multi {
         &self,
         _first: bool,
         machine: &EthereumMachine,
+        engine: &dyn EthEngine,
         number: BlockNumber,
         proof: &[u8],
     ) -> Result<(super::SimpleList, Option<H256>), ::error::Error> {
         let (set_block, set) = self.correct_set_by_number(number);
         let first = set_block == number;
 
-        set.epoch_set(first, machine, number, proof)
+        set.epoch_set(first, machine, engine, number, proof)
     }
 
     fn contains_with_caller(&self, bh: &H256, address: &Address, caller: &Call) -> bool {
@@ -320,7 +323,12 @@ mod tests {
         let mut header = Header::new();
         header.set_number(499);
         let sync_client = generate_dummy_client_with_spec(Spec::new_validator_multi);
-        match multi.signals_epoch_end(false, &header, Default::default(), sync_client.engine().machine()) {
+        match multi.signals_epoch_end(
+            false,
+            &header,
+            Default::default(),
+            sync_client.engine().machine(),
+        ) {
             EpochChange::No => {}
             _ => panic!("Expected no epoch signal change."),
         }
@@ -328,7 +336,12 @@ mod tests {
 
         header.set_number(500);
 
-        match multi.signals_epoch_end(false, &header, Default::default(), sync_client.engine().machine()) {
+        match multi.signals_epoch_end(
+            false,
+            &header,
+            Default::default(),
+            sync_client.engine().machine(),
+        ) {
             EpochChange::No => {}
             _ => panic!("Expected no epoch signal change."),
         }

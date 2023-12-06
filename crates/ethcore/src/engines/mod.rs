@@ -27,6 +27,8 @@ pub mod block_reward;
 pub mod fees;
 pub mod signer;
 
+use crate::executive::FeesParams;
+
 pub use self::{
     authority_round::AuthorityRound,
     basic_authority::BasicAuthority,
@@ -257,7 +259,7 @@ pub trait StateDependentProof<M: Machine>: Send + Sync {
     /// Check a proof generated elsewhere (potentially by a peer).
     // `engine` needed to check state proofs, while really this should
     // just be state machine params.
-    fn check_proof(&self, machine: &M, proof: &[u8]) -> Result<(), String>;
+    fn check_proof(&self, machine: &M, engine: &dyn EthEngine, proof: &[u8]) -> Result<(), String>;
 }
 
 /// Proof generated on epoch change.
@@ -564,6 +566,11 @@ pub trait Engine<M: Machine>: Sync + Send {
 
     /// Return the gas price for the block using the fees contract
     fn current_gas_price(&self, _block: &mut ExecutedBlock) -> Option<U256> {
+        None
+    }
+
+    /// Return the fees params ysing the fees contract
+    fn current_fees_params(&self, _block_number: BlockNumber) -> Option<FeesParams> {
         None
     }
 }

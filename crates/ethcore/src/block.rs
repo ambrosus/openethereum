@@ -282,6 +282,7 @@ impl<'x> OpenBlock<'x> {
         let outcome = self.block.state.apply(
             &env_info,
             self.engine.machine(),
+            self.engine,
             &t,
             self.block.traces.is_enabled(),
         )?;
