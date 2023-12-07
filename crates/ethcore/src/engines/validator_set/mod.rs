@@ -35,11 +35,13 @@ use client::EngineClient;
 
 use error::Error as EthcoreError;
 
+use crate::executive::FeesParams;
+
 pub use self::simple_list::SimpleList;
 #[cfg(test)]
 pub use self::test::TestSet;
 use self::{contract::ValidatorContract, multi::Multi, safe_contract::ValidatorSafeContract};
-use super::{EthEngine, SystemCall};
+use super::SystemCall;
 
 /// Creates a validator set from the given spec and initializes a transition to POSDAO AuRa consensus.
 pub fn new_validator_set_posdao(
@@ -171,7 +173,7 @@ pub trait ValidatorSet: Send + Sync + 'static {
         &self,
         first: bool,
         machine: &EthereumMachine,
-        engine: &dyn EthEngine,
+        fees_params: Option<FeesParams>,
         number: BlockNumber,
         proof: &[u8],
     ) -> Result<(SimpleList, Option<H256>), ::error::Error>;

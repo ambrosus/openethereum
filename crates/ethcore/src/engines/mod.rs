@@ -259,7 +259,12 @@ pub trait StateDependentProof<M: Machine>: Send + Sync {
     /// Check a proof generated elsewhere (potentially by a peer).
     // `engine` needed to check state proofs, while really this should
     // just be state machine params.
-    fn check_proof(&self, machine: &M, engine: &dyn EthEngine, proof: &[u8]) -> Result<(), String>;
+    fn check_proof(
+        &self,
+        machine: &M,
+        fees_params: Option<FeesParams>,
+        proof: &[u8],
+    ) -> Result<(), String>;
 }
 
 /// Proof generated on epoch change.

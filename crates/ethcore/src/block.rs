@@ -279,10 +279,11 @@ impl<'x> OpenBlock<'x> {
         } else {
             self.block.env_info()
         };
+        let fees_params = self.engine.current_fees_params(env_info.number);
         let outcome = self.block.state.apply(
             &env_info,
             self.engine.machine(),
-            self.engine,
+            fees_params,
             &t,
             self.block.traces.is_enabled(),
         )?;

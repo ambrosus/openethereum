@@ -28,7 +28,7 @@ use client::{traits::TransactionRequest, EngineClient};
 
 use error::Error as EthcoreError;
 
-use crate::engines::EthEngine;
+use crate::executive::FeesParams;
 
 use super::{safe_contract::ValidatorSafeContract, SimpleList, SystemCall, ValidatorSet};
 
@@ -175,12 +175,12 @@ impl ValidatorSet for ValidatorContract {
         &self,
         first: bool,
         machine: &EthereumMachine,
-        engine: &dyn EthEngine,
+        fees_params: Option<FeesParams>,
         number: BlockNumber,
         proof: &[u8],
     ) -> Result<(SimpleList, Option<H256>), ::error::Error> {
         self.validators
-            .epoch_set(first, machine, engine, number, proof)
+            .epoch_set(first, machine, fees_params, number, proof)
     }
 
     fn contains_with_caller(&self, bh: &H256, address: &Address, caller: &Call) -> bool {

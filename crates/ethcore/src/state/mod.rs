@@ -59,7 +59,7 @@ mod substate;
 
 pub mod backend;
 
-use crate::engines::EthEngine;
+use crate::executive::FeesParams;
 
 pub use self::{account::Account, backend::Backend, substate::Substate};
 
@@ -201,7 +201,7 @@ pub fn check_proof(
     root: H256,
     transaction: &SignedTransaction,
     machine: &Machine,
-    engine: &dyn EthEngine,
+    fees_params: Option<FeesParams>,
     env_info: &EnvInfo,
 ) -> ProvedExecution {
     let backend = self::backend::ProofCheck::new(proof);
@@ -221,7 +221,7 @@ pub fn check_proof(
     };
 
     let options = TransactOptions::with_no_tracing().save_output_from_contract();
-    match state.execute(env_info, machine, engine, transaction, options, true) {
+    match state.execute(env_info, machine, fees_params, transaction, options, true) {
         Ok(executed) => ProvedExecution::Complete(Box::new(executed)),
         Err(ExecutionError::Internal(_)) => ProvedExecution::BadProof,
         Err(e) => ProvedExecution::Failed(e),
@@ -236,7 +236,7 @@ pub fn prove_transaction_virtual<H: AsHashDB<KeccakHasher, DBValue> + Send + Syn
     root: H256,
     transaction: &SignedTransaction,
     machine: &Machine,
-    engine: &dyn EthEngine,
+    fees_params: Option<FeesParams>,
     env_info: &EnvInfo,
     factories: Factories,
 ) -> Option<(Bytes, Vec<DBValue>)> {
@@ -255,7 +255,7 @@ pub fn prove_transaction_virtual<H: AsHashDB<KeccakHasher, DBValue> + Send + Syn
     let options = TransactOptions::with_no_tracing()
         .dont_check_nonce()
         .save_output_from_contract();
-    match state.execute(env_info, machine, engine, transaction, options, true) {
+    match state.execute(env_info, machine, fees_params, transaction, options, true) {
         Err(ExecutionError::Internal(_)) => None,
         Err(e) => {
             trace!(target: "state", "Proved call failed: {}", e);
@@ -912,7 +912,7 @@ impl<B: Backend> State<B> {
         &mut self,
         env_info: &EnvInfo,
         machine: &Machine,
-        engine: &dyn EthEngine,
+        fees_params: Option<FeesParams>,
         t: &SignedTransaction,
         tracing: bool,
     ) -> ApplyResult<FlatTrace, VMTrace> {
@@ -921,7 +921,7 @@ impl<B: Backend> State<B> {
             self.apply_with_tracing(
                 env_info,
                 machine,
-                engine,
+                fees_params,
                 t,
                 options.tracer,
                 options.vm_tracer,
@@ -931,7 +931,7 @@ impl<B: Backend> State<B> {
             self.apply_with_tracing(
                 env_info,
                 machine,
-                engine,
+                fees_params,
                 t,
                 options.tracer,
                 options.vm_tracer,
@@ -945,7 +945,7 @@ impl<B: Backend> State<B> {
         &mut self,
         env_info: &EnvInfo,
         machine: &Machine,
-        engine: &dyn EthEngine,
+        fees_params: Option<FeesParams>,
         t: &SignedTransaction,
         tracer: T,
         vm_tracer: V,
@@ -955,7 +955,7 @@ impl<B: Backend> State<B> {
         V: trace::VMTracer,
     {
         let options = TransactOptions::new(tracer, vm_tracer);
-        let e = self.execute(env_info, machine, engine, t, options, false)?;
+        let e = self.execute(env_info, machine, fees_params, t, options, false)?;
         let params = machine.params();
 
         let eip658 = env_info.number >= params.eip658_transition;
@@ -997,7 +997,7 @@ impl<B: Backend> State<B> {
         &mut self,
         env_info: &EnvInfo,
         machine: &Machine,
-        engine: &dyn EthEngine,
+        fees_params: Option<FeesParams>,
         t: &SignedTransaction,
         options: TransactOptions<T, V>,
         virt: bool,
@@ -1008,7 +1008,6 @@ impl<B: Backend> State<B> {
     {
         let schedule = machine.schedule(env_info.number);
         let mut e = Executive::new(self, env_info, machine, &schedule);
-        let fees_params = engine.current_fees_params(env_info.number);
 
         match virt {
             true => e.transact_virtual(t, options, fees_params),

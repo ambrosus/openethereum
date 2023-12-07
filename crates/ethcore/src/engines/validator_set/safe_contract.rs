@@ -35,7 +35,7 @@ use types::{
 };
 use unexpected::Mismatch;
 
-use crate::engines::EthEngine;
+use crate::executive::FeesParams;
 
 use super::{simple_list::SimpleList, SystemCall, ValidatorSet};
 use client::{traits::TransactionRequest, BlockChainClient, EngineClient};
@@ -74,7 +74,7 @@ impl ::engines::StateDependentProof<EthereumMachine> for StateProof {
     fn check_proof(
         &self,
         machine: &EthereumMachine,
-        engine: &dyn EthEngine,
+        fees_params: Option<FeesParams>,
         proof: &[u8],
     ) -> Result<(), String> {
         let (header, state_items) =
@@ -84,7 +84,14 @@ impl ::engines::StateDependentProof<EthereumMachine> for StateProof {
             return Err("wrong header in proof".into());
         }
 
-        check_first_proof(machine, engine, self.contract_address, header, &state_items).map(|_| ())
+        check_first_proof(
+            machine,
+            fees_params,
+            self.contract_address,
+            header,
+            &state_items,
+        )
+        .map(|_| ())
     }
 }
 
@@ -115,7 +122,7 @@ fn encode_first_proof(header: &Header, state_items: &[Vec<u8>]) -> Bytes {
 // check a first proof: fetch the validator set at the given block.
 fn check_first_proof(
     machine: &EthereumMachine,
-    engine: &dyn EthEngine,
+    fees_params: Option<FeesParams>,
     contract_address: Address,
     old_header: Header,
     state_items: &[DBValue],
@@ -161,7 +168,7 @@ fn check_first_proof(
         *old_header.state_root(),
         &tx,
         machine,
-        engine,
+        fees_params,
         &env_info,
     );
 
@@ -600,7 +607,7 @@ impl ValidatorSet for ValidatorSafeContract {
         &self,
         first: bool,
         machine: &EthereumMachine,
-        engine: &dyn EthEngine,
+        fees_params: Option<FeesParams>,
         _number: ::types::BlockNumber,
         proof: &[u8],
     ) -> Result<(SimpleList, Option<H256>), ::error::Error> {
@@ -615,7 +622,7 @@ impl ValidatorSet for ValidatorSafeContract {
             let old_hash = old_header.hash();
             let addresses = check_first_proof(
                 machine,
-                engine,
+                fees_params,
                 self.contract_address,
                 old_header,
                 &state_items,

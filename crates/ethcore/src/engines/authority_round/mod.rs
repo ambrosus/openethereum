@@ -45,6 +45,8 @@ use std::{
     u64,
 };
 
+use crate::executive::FeesParams;
+
 use self::finality::RollingFinality;
 use super::{
     fees::FeesContract,
@@ -466,7 +468,7 @@ impl EpochManager {
         &mut self,
         client: &dyn EngineClient,
         machine: &EthereumMachine,
-        engine: &dyn EthEngine,
+        fees_params: Option<FeesParams>,
         validators: &dyn ValidatorSet,
         hash: H256,
     ) -> bool {
@@ -511,7 +513,7 @@ impl EpochManager {
                 .epoch_set(
                     first,
                     machine,
-                    engine,
+                    fees_params,
                     signal_number, // use signal number so multi-set first calculation is correct.
                     set_proof,
                 )
@@ -1129,11 +1131,12 @@ impl AuthorityRound {
         } else {
             let mut epoch_manager = self.epoch_manager.lock();
             let client = self.upgrade_client_or("Unable to verify sig")?;
+            let fees_params = self.current_fees_params(header.number());
 
             if !epoch_manager.zoom_to_after(
                 &*client,
                 &self.machine,
-                self,
+                fees_params,
                 &*self.validators,
                 *header.parent_hash(),
             ) {
@@ -1271,10 +1274,11 @@ impl AuthorityRound {
         };
 
         let mut epoch_manager = self.epoch_manager.lock();
+        let fees_params = self.current_fees_params(chain_head.number());
         if !epoch_manager.zoom_to_after(
             &*client,
             &self.machine,
-            self,
+            fees_params,
             &*self.validators,
             *chain_head.parent_hash(),
         ) {
@@ -1515,7 +1519,7 @@ impl IoHandler<()> for TransitionHandler {
 
 fn push_reward_transaction<'a>(
     machine: &EthereumMachine,
-    engine: &dyn EthEngine,
+    fees_params: Option<FeesParams>,
     block: &'a mut ExecutedBlock,
     t: SignedTransaction,
     h: Option<H256>,
@@ -1535,10 +1539,15 @@ fn push_reward_transaction<'a>(
         env_info.gas_limit = env_info.gas_limit.saturating_add(gas);
         env_info
     };
+
     // let gas_used = env_info.gas_used;
-    let outcome = block
-        .state
-        .apply(&env_info, machine, engine, &t, block.traces.is_enabled())?;
+    let outcome = block.state.apply(
+        &env_info,
+        machine,
+        fees_params,
+        &t,
+        block.traces.is_enabled(),
+    )?;
 
     block.transactions_set.insert(h.unwrap_or_else(|| t.hash()));
     block.transactions.push(t.into());
@@ -1700,10 +1709,11 @@ impl Engine<EthereumMachine> for AuthorityRound {
             CowLike::Borrowed(&*self.validators)
         } else {
             let mut epoch_manager = self.epoch_manager.lock();
+            let fees_params = self.current_fees_params(parent.number());
             if !epoch_manager.zoom_to_after(
                 &*client,
                 &self.machine,
-                self,
+                fees_params,
                 &*self.validators,
                 parent.hash(),
             ) {
@@ -1740,10 +1750,11 @@ impl Engine<EthereumMachine> for AuthorityRound {
             CowLike::Borrowed(&*self.validators)
         } else {
             let mut epoch_manager = self.epoch_manager.lock();
+            let fees_params = self.current_fees_params(parent.number());
             if !epoch_manager.zoom_to_after(
                 &*client,
                 &self.machine,
-                self,
+                fees_params,
                 &*self.validators,
                 parent.hash(),
             ) {
@@ -2047,9 +2058,15 @@ impl Engine<EthereumMachine> for AuthorityRound {
                                     t.with_signature(signature, Some(chain_id)),
                                 )?;
 
-                                if let Err(e) =
-                                    push_reward_transaction(&self.machine, self, block, tx, None)
-                                {
+                                let fees_params = self.current_fees_params(block.header.number());
+
+                                if let Err(e) = push_reward_transaction(
+                                    &self.machine,
+                                    fees_params,
+                                    block,
+                                    tx,
+                                    None,
+                                ) {
                                     info!(target: "engine", "push_reward_transaction: {:?}", e);
                                 }
 
@@ -2418,7 +2435,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
 
     fn epoch_verifier<'a>(
         &self,
-        _header: &Header,
+        header: &Header,
         proof: &'a [u8],
     ) -> ConstructedVerifier<'a, EthereumMachine> {
         let (signal_number, set_proof, finality_proof) = match destructure_proofs(proof) {
@@ -2427,9 +2444,10 @@ impl Engine<EthereumMachine> for AuthorityRound {
         };
 
         let first = signal_number == 0;
+        let fees_params = self.current_fees_params(header.number());
         match self
             .validators
-            .epoch_set(first, &self.machine, self, signal_number, set_proof)
+            .epoch_set(first, &self.machine, fees_params, signal_number, set_proof)
         {
             Ok((list, finalize)) => {
                 let verifier = Box::new(EpochVerifier {
