@@ -1104,14 +1104,12 @@ impl Spec {
             })
             .fake_sign(from);
 
-            let fees_params = self.engine.current_fees_params(env_info.number);
-
             let res = ::state::prove_transaction_virtual(
                 db.as_hash_db_mut(),
                 *genesis.state_root(),
                 &tx,
                 self.engine.machine(),
-                fees_params,
+                None,
                 &env_info,
                 factories.clone(),
             );

@@ -23,7 +23,6 @@ use ethereum_types::{Address, H256};
 use parking_lot::RwLock;
 use types::{header::Header, ids::BlockId, BlockNumber};
 
-use crate::engines::EthEngine;
 use crate::executive::FeesParams;
 
 use super::{SystemCall, ValidatorSet};

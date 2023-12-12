@@ -575,7 +575,7 @@ pub trait Engine<M: Machine>: Sync + Send {
     }
 
     /// Return the fees params ysing the fees contract
-    fn current_fees_params(&self, _block_number: BlockNumber) -> Option<FeesParams> {
+    fn current_fees_params(&self, _header: &Header) -> Option<FeesParams> {
         None
     }
 }

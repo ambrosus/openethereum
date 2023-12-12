@@ -1131,7 +1131,7 @@ impl AuthorityRound {
         } else {
             let mut epoch_manager = self.epoch_manager.lock();
             let client = self.upgrade_client_or("Unable to verify sig")?;
-            let fees_params = self.current_fees_params(header.number());
+            let fees_params = self.current_fees_params(header);
 
             if !epoch_manager.zoom_to_after(
                 &*client,
@@ -1274,7 +1274,7 @@ impl AuthorityRound {
         };
 
         let mut epoch_manager = self.epoch_manager.lock();
-        let fees_params = self.current_fees_params(chain_head.number());
+        let fees_params = self.current_fees_params(chain_head);
         if !epoch_manager.zoom_to_after(
             &*client,
             &self.machine,
@@ -1709,7 +1709,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
             CowLike::Borrowed(&*self.validators)
         } else {
             let mut epoch_manager = self.epoch_manager.lock();
-            let fees_params = self.current_fees_params(parent.number());
+            let fees_params = self.current_fees_params(&parent);
             if !epoch_manager.zoom_to_after(
                 &*client,
                 &self.machine,
@@ -1750,7 +1750,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
             CowLike::Borrowed(&*self.validators)
         } else {
             let mut epoch_manager = self.epoch_manager.lock();
-            let fees_params = self.current_fees_params(parent.number());
+            let fees_params = self.current_fees_params(&parent);
             if !epoch_manager.zoom_to_after(
                 &*client,
                 &self.machine,
@@ -2058,7 +2058,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
                                     t.with_signature(signature, Some(chain_id)),
                                 )?;
 
-                                let fees_params = self.current_fees_params(block.header.number());
+                                let fees_params = self.current_fees_params(&block.header);
 
                                 if let Err(e) = push_reward_transaction(
                                     &self.machine,
@@ -2444,7 +2444,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
         };
 
         let first = signal_number == 0;
-        let fees_params = self.current_fees_params(header.number());
+        let fees_params = self.current_fees_params(header);
         match self
             .validators
             .epoch_set(first, &self.machine, fees_params, signal_number, set_proof)
@@ -2561,18 +2561,21 @@ impl Engine<EthereumMachine> for AuthorityRound {
     }
 
     /// Return the params for the new transaction fee reward
-    fn current_fees_params(
-        &self,
-        block_number: BlockNumber,
-    ) -> Option<crate::executive::FeesParams> {
-        let fees_contract_transition = self.fees_contract_transitions.range(..=block_number).last();
+    fn current_fees_params(&self, header: &Header) -> Option<crate::executive::FeesParams> {
+        let fees_contract_transition = self
+            .fees_contract_transitions
+            .range(..=header.number())
+            .last();
 
         if let Some((_, contract)) = fees_contract_transition {
-            match self.upgrade_client_or("Failed to call fees contract") {
-                Ok(client) => {
+            let client = self
+                .upgrade_client_or("Failed to upgrade the client")
+                .expect("Some error occured");
+            match client.as_full_client() {
+                Some(client) => {
                     let result = contract
-                        .get_fees_params(&*client, BlockId::Number(block_number))
-                        .expect("Failed to get gas_price");
+                        .get_fees_params(&*client, BlockId::Hash(*header.parent_hash()))
+                        .expect("Failed to get fees params");
                     let fees_params = crate::executive::FeesParams {
                         address: result.0,
                         governance_part: result.1,

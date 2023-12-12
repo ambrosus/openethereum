@@ -1,7 +1,7 @@
 version: '3.9'
 services:
   apollo0:
-    image: fees-test:v2
+    image: fees-test:latest
     command: --config /opt/apollo/config.toml
     networks:
       amb-eth-net:
@@ -14,7 +14,7 @@ services:
       - ./amb/apollo0/:/opt/apollo
 
   apollo1:
-    image: fees-test:v2
+    image: fees-test:latest
     command: --config /opt/apollo/config.toml
     networks:
       amb-eth-net:
@@ -27,7 +27,7 @@ services:
       - ./amb/apollo1/:/opt/apollo
 
   apollo2:
-    image: fees-test:v2
+    image: fees-test:latest
     command: --config /opt/apollo/config.toml
     networks:
       amb-eth-net:

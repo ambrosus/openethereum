@@ -23,3 +23,15 @@ run local nodes - `make run` or `docker-compose up`
 
 address: `0x0000000000000000000000000000000000000F00`  
 owner: `0x4c9785451bb2CA3E91B350C06bcB5f974cA33F79` (validator1)
+
+#### transaction fees contract
+
+address: `0x407d73d8a49eeb85d32cf465507dd71d507100c1`
+
+#### Test caller 1
+address: `0x6179E71d6D43d483CEefE790b07B0b6057116766`
+pk : `0xc2295252305f0b89c0a8db0100554749f1223d18c1a74040b729083b08d0ba6b`
+
+#### Test caller 2
+address: `0x6f31C640b560aa857F57493eA4f3C9bF32dBE594`
+pk: `0xd577cf63ad293aba163ab251be8307e706dc7b0053045ac00c18ece15f6c50b1`

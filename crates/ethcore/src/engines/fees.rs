@@ -4,9 +4,10 @@
 use ethereum_types::{Address, U256};
 use types::ids::BlockId;
 
-use crate::client::EngineClient;
+use crate::client::BlockChainClient;
+use ethabi::FunctionOutputDecoder;
 
-use super::{authority_round::util::BoundContract, SystemOrCodeCall, SystemOrCodeCallKind};
+use super::{SystemOrCodeCall, SystemOrCodeCallKind};
 use error::Error;
 
 use_contract!(fees_contract, "res/contracts/fees.json");
@@ -50,25 +51,29 @@ impl FeesContract {
     /// Returns the params for the new transaction fee reward
     pub fn get_fees_params(
         &self,
-        client: &dyn EngineClient,
+        client: &dyn BlockChainClient,
         block_id: BlockId,
-    ) -> Result<(Address, U256), Error> {
+    ) -> Option<(Address, U256)> {
         match self.kind {
             SystemOrCodeCallKind::Address(address) => {
-                let contract = BoundContract::new(client, block_id, address);
-                let result = contract
-                    .call_const(fees_contract::functions::get_fees_params::call())
-                    .map_err(|_| {
-                        ::engines::EngineError::FailedSystemCall(
-                            "Failed to call fees contract".to_string(),
-                        )
-                    })?;
-                Ok(result)
+                let (data, decoder) = fees_contract::functions::get_fees_params::call();
+                let value = client
+                    .call_contract(block_id, address, data)
+                    .map_err(|err| {
+                        error!(target: "fees", "Failed to call the contract: {:?}", err);
+                    })
+                    .ok()?;
+                if let Some(result) = decoder.decode(&value).ok() {
+                    Some(result)
+                } else {
+                    error!(target:  "fees", "Failed to decode the result");
+                    None
+                }
             }
-            _ => Err(::engines::EngineError::FailedSystemCall(
-                "Failed to call fees contract".to_string(),
-            )
-            .into()),
+            _ => {
+                error!(target: "fees", "Incompedible kind");
+                None
+            }
         }
     }
 }

@@ -992,7 +992,7 @@ impl<B: Backend> State<B> {
     // Execute a given transaction without committing changes.
     //
     // `virt` signals that we are executing outside of a block set and restrictions like
-    // gas limits and gas costs should be lifted.
+    // gas limits and gas costs should be lifted. Also, the fees_params could be omitted.
     fn execute<T, V>(
         &mut self,
         env_info: &EnvInfo,
@@ -1010,7 +1010,7 @@ impl<B: Backend> State<B> {
         let mut e = Executive::new(self, env_info, machine, &schedule);
 
         match virt {
-            true => e.transact_virtual(t, options, fees_params),
+            true => e.transact_virtual(t, options),
             false => e.transact(t, options, fees_params),
         }
     }
