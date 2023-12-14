@@ -245,12 +245,7 @@ impl From<ethjson::spec::AuthorityRoundParams> for AuthorityRoundParams {
             .fees_contract_transitions
             .unwrap_or_default()
             .into_iter()
-            .map(|(block_num, address)| {
-                (
-                    block_num.into(),
-                    FeesContract::new_from_address(address.into()),
-                )
-            })
+            .map(|(block_num, address)| (block_num.into(), FeesContract::new(address.into())))
             .collect();
         AuthorityRoundParams {
             step_durations,
@@ -2529,36 +2524,44 @@ impl Engine<EthereumMachine> for AuthorityRound {
     }
 
     /// Returns the gas price for the block calling the fees contract
-    fn current_gas_price(&self, block: &mut ExecutedBlock) -> Option<U256> {
-        trace!(target: "engine", "trying to get gas price on block number: {}", block.header.number());
-        let fees_contract_transition = self
-            .fees_contract_transitions
-            .range(..=block.header.number())
-            .last();
-
-        if let Some((_, contract)) = fees_contract_transition {
-            trace!(target: "engine", "Got transition on block number {}", block.header.number());
-            let mut call = crate::engines::default_system_or_code_call(&self.machine, block);
-            let gas_price = contract
-                .get_gas_price(&mut call)
-                .expect("Failed to get gas_price");
-            return Some(gas_price);
-        } else {
-            trace!(target: "engine", "No gas price transition on block number {}", block.header.number());
-            return None;
-        }
-    }
-
-    /// Return the params for the new transaction fee reward
-    fn current_fees_params(&self, header: &Header) -> Option<crate::executive::FeesParams> {
-        trace!(target: "engine", "trying to get fees params on block number: {}", header.number());
+    fn current_gas_price(&self, header: &Header) -> Option<U256> {
         let fees_contract_transition = self
             .fees_contract_transitions
             .range(..=header.number())
             .last();
 
         if let Some((_, contract)) = fees_contract_transition {
-            trace!(target: "engine", "Got transition on block number {}", header.number());
+            trace!(target: "engine", "Got gas price transition on block number {}", header.number());
+            let client = self
+                .upgrade_client_or("Failed to upgrade the client")
+                .unwrap();
+            match client.as_full_client() {
+                Some(client) => {
+                    let gas_price = contract
+                        .get_gas_price(&*client, BlockId::Hash(*header.parent_hash()))
+                        .expect("Failed to get gas_price");
+                    Some(gas_price)
+                }
+                _ => {
+                    debug!(target: "engine", "Failed to got full client for gas price. returning None");
+                    None
+                }
+            }
+        } else {
+            trace!(target: "engine", "No gas price transition on block number {}", header.number());
+            return None;
+        }
+    }
+
+    /// Return the params for the new transaction fee reward
+    fn current_fees_params(&self, header: &Header) -> Option<crate::executive::FeesParams> {
+        let fees_contract_transition = self
+            .fees_contract_transitions
+            .range(..=header.number())
+            .last();
+
+        if let Some((_, contract)) = fees_contract_transition {
+            trace!(target: "engine", "Got fees params transition on block number {}", header.number());
             let client = self
                 .upgrade_client_or("Failed to upgrade the client")
                 .expect("Some error occured");

@@ -407,8 +407,8 @@ impl<'x> OpenBlock<'x> {
     }
 
     /// Returns the current gas price from the fees contract
-    pub fn current_gas_price(&mut self) -> Option<U256> {
-        self.engine.current_gas_price(&mut self.block)
+    pub fn current_gas_price(&self) -> Option<U256> {
+        self.engine.current_gas_price(&self.block.header)
     }
 
     #[cfg(test)]

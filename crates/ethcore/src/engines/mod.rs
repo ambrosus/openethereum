@@ -565,7 +565,7 @@ pub trait Engine<M: Machine>: Sync + Send {
     }
 
     /// Return the gas price for the block using the fees contract
-    fn current_gas_price(&self, _block: &mut ExecutedBlock) -> Option<U256> {
+    fn current_gas_price(&self, _header: &Header) -> Option<U256> {
         None
     }
 
