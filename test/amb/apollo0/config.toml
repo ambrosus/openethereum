@@ -36,4 +36,4 @@ force_sealing = true
 extra_data = "Apollo v3.3.3-amb1.0.1"
 
 [misc]
-logging = "all"
+logging = "engine=trace,block_import=trace,miner=trace,finality=trace"

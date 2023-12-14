@@ -1,0 +1,487 @@
+Loading config file from /opt/apollo/config.toml
+2023-12-14 16:12:59 UTC main INFO openethereum::run  Starting OpenEthereum/v3.3.3-stable/x86_64-linux-gnu/rustc1.47.0
+2023-12-14 16:12:59 UTC main INFO openethereum::run  Keys path /opt/apollo/keys/ambnet-integration-test
+2023-12-14 16:12:59 UTC main INFO openethereum::run  DB path /opt/apollo/chains/ambnet-integration-test/db/0e2270e655ea6eb1
+2023-12-14 16:12:59 UTC main INFO openethereum::run  State DB configuration: fast
+2023-12-14 16:12:59 UTC main INFO openethereum::run  Operating mode: active
+2023-12-14 16:14:08 UTC main WARN engine  Not preparing block; cannot sign.
+2023-12-14 16:14:08 UTC main INFO ethcore_service::service  Configured for ambnet-integration-test using AuthorityRound engine
+2023-12-14 16:14:08 UTC main TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:14:08 UTC main TRACE engine  obtained proof for initial set: 3 validators, 4849 bytes
+2023-12-14 16:14:08 UTC main INFO engine  Signal for switch to contract-based validator set.
+2023-12-14 16:14:08 UTC main INFO engine  Initial contract validators: [0x4c9785451bb2ca3e91b350c06bcb5f974ca33f79, 0x90b2ce3741188bcfce25822113e93983ecacfca0, 0xaccdb7a2268bc4af0a1898e725138888ba1ca6fc]
+2023-12-14 16:14:08 UTC main TRACE engine  Setting up contract caller.
+2023-12-14 16:14:08 UTC main TRACE engine  Setting up contract caller.
+2023-12-14 16:14:08 UTC main TRACE miner  minimal_gas_price: recalibrating...
+2023-12-14 16:14:08 UTC main DEBUG miner  minimal_gas_price: Got gas price! 0
+2023-12-14 16:14:08 UTC Worker devp2p0 INFO network  Public node URL: enode://a585b20b778a9f483499694f76a0fd8c56c11a5685567b20f43face07c1042ef7cfd34e69fa189bbfbc264166fae591c42bbe790c03b1a8d716873574de2e06a@10.0.0.10:30303
+2023-12-14 16:14:08 UTC main INFO parity_ws  Listening for new connections on 0.0.0.0:8546.
+2023-12-14 16:14:10 UTC Worker AuRa2 TRACE miner  update_sealing
+2023-12-14 16:14:10 UTC Worker AuRa2 TRACE miner  requires_reseal: sealing enabled
+2023-12-14 16:14:10 UTC Worker AuRa2 DEBUG engine  Zooming to epoch after block 0xbfe3…05c9
+2023-12-14 16:14:10 UTC Worker AuRa2 TRACE engine  extracting epoch validator set for epoch (0, 0xbfe3…05c9) signalled at #0
+2023-12-14 16:14:10 UTC Worker AuRa2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:14:10 UTC Worker AuRa2 TRACE engine  Recovering initial epoch set
+2023-12-14 16:14:10 UTC Worker AuRa2 TRACE engine  extracted epoch set at #0: 3 addresses
+2023-12-14 16:14:10 UTC Worker AuRa2 TRACE engine  Updating finality checker with new validator set extracted from epoch (0, 0xbfe3…05c9): SimpleList { validators: [0x4c9785451bb2ca3e91b350c06bcb5f974ca33f79, 0x90b2ce3741188bcfce25822113e93983ecacfca0, 0xaccdb7a2268bc4af0a1898e725138888ba1ca6fc] }
+2023-12-14 16:14:10 UTC Worker AuRa2 TRACE engine  Fetched proposer for step 340514090: 0xaccd…a6fc
+2023-12-14 16:14:10 UTC Worker AuRa2 TRACE engine  Not preparing block: not a proposer for step 340514090. (Our address: 0x4c97…3f79)
+2023-12-14 16:14:10 UTC Worker AuRa2 TRACE miner  requires_reseal: should_disable_sealing=false; forced=true, has_local=false, internal=NotReady, had_requests=false
+2023-12-14 16:14:10 UTC Worker AuRa2 DEBUG engine  Zooming to epoch after block 0xbfe3…05c9
+2023-12-14 16:14:10 UTC Worker AuRa2 TRACE engine  Fetched proposer for step 340514090: 0xaccd…a6fc
+2023-12-14 16:14:10 UTC Worker AuRa2 TRACE engine  Not preparing block: not a proposer for step 340514090. (Our address: 0x4c97…3f79)
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE miner  update_sealing
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE miner  requires_reseal: sealing enabled
+2023-12-14 16:14:15 UTC Worker AuRa3 DEBUG engine  Zooming to epoch after block 0xbfe3…05c9
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE engine  Fetched proposer for step 340514091: 0x4c97…3f79
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE miner  requires_reseal: should_disable_sealing=false; forced=true, has_local=false, internal=Ready, had_requests=false
+2023-12-14 16:14:15 UTC Worker AuRa3 DEBUG engine  Zooming to epoch after block 0xbfe3…05c9
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE engine  Fetched proposer for step 340514091: 0x4c97…3f79
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE miner  update_sealing: preparing a block
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE miner  prepare_block: No existing work - making new block
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE engine  Epoch begin, finalizing validators changes
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE engine  Skipping POSDAO calls to validator set contracts
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE engine  trying to get gas price on block number: 1
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE engine  No gas price transition on block number 1
+2023-12-14 16:14:15 UTC Worker AuRa3 DEBUG miner  Attempting to push 0 transactions.
+2023-12-14 16:14:15 UTC Worker AuRa3 DEBUG miner  Pushed 0 transactions in 0 ms
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE engine  Skipping resending of queued malicious behavior reports
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE miner  update_sealing: engine indicates internal sealing
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE miner  seal_block_internally: attempting internal seal.
+2023-12-14 16:14:15 UTC Worker AuRa3 DEBUG engine  Zooming to epoch after block 0xbfe3…05c9
+2023-12-14 16:14:15 UTC Worker AuRa3 TRACE engine  Fetched proposer for step 340514091: 0x4c97…3f79
+2023-12-14 16:14:43 UTC Worker Client3 INFO import    2/25 peers      1 KiB chain  0 bytes queue  RPC:  0 conn,    0 req/s,    0 µs
+2023-12-14 16:15:11 UTC Verifier #1 TRACE block_import  fn import_verified_blocks
+2023-12-14 16:15:11 UTC Verifier #1 DEBUG engine  Zooming to epoch after block 0xbfe3…05c9
+2023-12-14 16:15:11 UTC Verifier #1 DEBUG engine  Zooming to epoch after block 0xbfe3…05c9
+2023-12-14 16:15:11 UTC Verifier #1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:15:11 UTC Verifier #1 TRACE engine  Epoch begin, finalizing validators changes
+2023-12-14 16:15:11 UTC Verifier #1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:15:11 UTC Verifier #1 TRACE engine  Skipping resending of queued malicious behavior reports
+2023-12-14 16:15:11 UTC Verifier #1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:15:11 UTC Verifier #1 DEBUG engine  Expected topics for header 0xbbc1…264d: [0x55252fa6eee4741b4e24a74a70e9c11fd2c2281df8d6ea13126ff845f7825c89, 0xbfe31bba73707300851cc35f48404736295768320e2270e655ea6eb11d8005c9]
+2023-12-14 16:15:11 UTC Verifier #1 TRACE block_import  Block #1(0xbbc1…264d) check pass
+2023-12-14 16:15:11 UTC Verifier #1 DEBUG engine  Zooming to epoch after block 0xbfe3…05c9
+2023-12-14 16:15:11 UTC Verifier #1 TRACE finality  Building finality up to parent of 0xbbc1…264d (0xbfe3…05c9)
+2023-12-14 16:15:11 UTC Verifier #1 TRACE finality  Ancestry iteration: yielding (0xbfe31bba73707300851cc35f48404736295768320e2270e655ea6eb11d8005c9, 0, [0x0000000000000000000000000000000000000000])
+2023-12-14 16:15:11 UTC Verifier #1 TRACE finality  Rolling finality state: []
+2023-12-14 16:15:11 UTC Verifier #1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:15:11 UTC Verifier #1 TRACE block_import  Block #1(0xbbc1…264d) commited
+2023-12-14 16:15:11 UTC Verifier #1 TRACE block_import  Imported block, notify rest of system
+2023-12-14 16:15:11 UTC Verifier #1 TRACE miner  chain_new_blocks
+2023-12-14 16:15:11 UTC Verifier #1 TRACE miner  minimal_gas_price: recalibrating...
+2023-12-14 16:15:11 UTC Verifier #1 DEBUG miner  minimal_gas_price: Got gas price! 0
+2023-12-14 16:15:11 UTC Verifier #1 TRACE miner  update_sealing
+2023-12-14 16:15:11 UTC Verifier #1 TRACE miner  requires_reseal: sealing enabled
+2023-12-14 16:15:11 UTC Verifier #1 TRACE engine  Fetched proposer for step 340514091: 0x4c97…3f79
+2023-12-14 16:15:11 UTC Verifier #1 TRACE miner  requires_reseal: should_disable_sealing=false; forced=true, has_local=false, internal=Ready, had_requests=false
+2023-12-14 16:15:11 UTC Verifier #1 TRACE engine  Fetched proposer for step 340514091: 0x4c97…3f79
+2023-12-14 16:15:11 UTC Verifier #1 TRACE miner  update_sealing: preparing a block
+2023-12-14 16:15:11 UTC Verifier #1 TRACE miner  prepare_block: No existing work - making new block
+2023-12-14 16:15:11 UTC Verifier #1 TRACE engine  Skipping POSDAO calls to validator set contracts
+2023-12-14 16:15:11 UTC Verifier #1 TRACE engine  trying to get gas price on block number: 2
+2023-12-14 16:15:11 UTC Verifier #1 TRACE engine  No gas price transition on block number 2
+2023-12-14 16:15:11 UTC Verifier #1 DEBUG miner  Attempting to push 0 transactions.
+2023-12-14 16:15:11 UTC Verifier #1 DEBUG miner  Pushed 0 transactions in 0 ms
+2023-12-14 16:15:11 UTC Verifier #1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:15:11 UTC Verifier #1 TRACE engine  Skipping resending of queued malicious behavior reports
+2023-12-14 16:15:11 UTC Verifier #1 TRACE miner  update_sealing: engine indicates internal sealing
+2023-12-14 16:15:11 UTC Verifier #1 TRACE miner  seal_block_internally: attempting internal seal.
+2023-12-14 16:15:11 UTC Verifier #1 TRACE engine  Fetched proposer for step 340514091: 0x4c97…3f79
+2023-12-14 16:15:13 UTC Worker Client2 INFO import    2/25 peers      1 KiB chain  0 bytes queue  RPC:  0 conn,    0 req/s,    0 µs
+2023-12-14 16:15:28 UTC Worker AuRa3 TRACE engine  generate_seal: Issuing a block for step 340514091.
+2023-12-14 16:15:28 UTC Worker AuRa3 TRACE miner  Received a Regular seal.
+2023-12-14 16:15:28 UTC Worker AuRa3 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:15:28 UTC Worker AuRa3 DEBUG engine  Expected topics for header 0x2375…8b59: [0x55252fa6eee4741b4e24a74a70e9c11fd2c2281df8d6ea13126ff845f7825c89, 0xbfe31bba73707300851cc35f48404736295768320e2270e655ea6eb11d8005c9]
+2023-12-14 16:15:28 UTC Worker AuRa3 DEBUG engine  Zooming to epoch after block 0xbfe3…05c9
+2023-12-14 16:15:28 UTC Worker AuRa3 TRACE finality  Building finality up to parent of 0x2375…8b59 (0xbfe3…05c9)
+2023-12-14 16:15:28 UTC Worker AuRa3 TRACE finality  Ancestry iteration: yielding (0xbfe31bba73707300851cc35f48404736295768320e2270e655ea6eb11d8005c9, 0, [0x0000000000000000000000000000000000000000])
+2023-12-14 16:15:28 UTC Worker AuRa3 TRACE finality  Rolling finality state: []
+2023-12-14 16:15:28 UTC Worker AuRa3 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:15:28 UTC Worker AuRa3 DEBUG engine  Zooming to epoch after block 0xbbc1…264d
+2023-12-14 16:15:28 UTC Worker AuRa3 TRACE engine  Fetched proposer for step 340514105: 0xaccd…a6fc
+2023-12-14 16:15:28 UTC Worker AuRa3 TRACE engine  Not preparing block: not a proposer for step 340514105. (Our address: 0x4c97…3f79)
+2023-12-14 16:15:28 UTC Worker AuRa3 TRACE miner  chain_new_blocks
+2023-12-14 16:15:28 UTC Worker AuRa3 TRACE miner  minimal_gas_price: recalibrating...
+2023-12-14 16:15:28 UTC Worker AuRa3 DEBUG miner  minimal_gas_price: Got gas price! 0
+2023-12-14 16:15:28 UTC Worker AuRa3 INFO import  Imported #1 0x2375…8b59 (0 txs, 0.00 Mgas, 43 ms, 0.56 KiB)
+2023-12-14 16:15:28 UTC Worker AuRa3 TRACE miner  update_sealing: imported internally sealed block
+2023-12-14 16:15:30 UTC Worker AuRa0 TRACE miner  update_sealing
+2023-12-14 16:15:30 UTC Worker AuRa0 TRACE miner  requires_reseal: sealing enabled
+2023-12-14 16:15:30 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0xbbc1…264d
+2023-12-14 16:15:30 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514106: 0x4c97…3f79
+2023-12-14 16:15:30 UTC Worker AuRa0 TRACE miner  requires_reseal: should_disable_sealing=false; forced=true, has_local=false, internal=Ready, had_requests=false
+2023-12-14 16:15:30 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0xbbc1…264d
+2023-12-14 16:15:30 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514106: 0x4c97…3f79
+2023-12-14 16:15:30 UTC Worker AuRa0 TRACE miner  update_sealing: preparing a block
+2023-12-14 16:15:30 UTC Worker AuRa0 TRACE miner  prepare_block: No existing work - making new block
+2023-12-14 16:15:30 UTC Worker AuRa0 TRACE engine  Skipping POSDAO calls to validator set contracts
+2023-12-14 16:15:30 UTC Worker AuRa0 TRACE engine  trying to get gas price on block number: 2
+2023-12-14 16:15:30 UTC Worker AuRa0 TRACE engine  No gas price transition on block number 2
+2023-12-14 16:15:30 UTC Worker AuRa0 DEBUG miner  Attempting to push 0 transactions.
+2023-12-14 16:15:30 UTC Worker AuRa0 DEBUG miner  Pushed 0 transactions in 0 ms
+2023-12-14 16:15:30 UTC Worker AuRa0 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:15:30 UTC Worker AuRa0 TRACE engine  Skipping resending of queued malicious behavior reports
+2023-12-14 16:15:30 UTC Worker AuRa0 TRACE miner  update_sealing: engine indicates internal sealing
+2023-12-14 16:15:30 UTC Worker AuRa0 TRACE miner  seal_block_internally: attempting internal seal.
+2023-12-14 16:15:30 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0xbbc1…264d
+2023-12-14 16:15:30 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514106: 0x4c97…3f79
+2023-12-14 16:15:43 UTC Worker Client3 INFO import    2/25 peers      2 KiB chain    2 KiB queue  RPC:  0 conn,    0 req/s,    0 µs
+2023-12-14 16:16:13 UTC Worker Client1 INFO import    2/25 peers      2 KiB chain    2 KiB queue  RPC:  0 conn,    0 req/s,    0 µs
+2023-12-14 16:16:44 UTC Verifier #1 TRACE engine  generate_seal: Issuing a block for step 340514091.
+2023-12-14 16:16:44 UTC Verifier #1 TRACE miner  Received a Regular seal.
+2023-12-14 16:16:44 UTC Verifier #1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:16:44 UTC Verifier #1 DEBUG engine  Expected topics for header 0x208b…0d0b: [0x55252fa6eee4741b4e24a74a70e9c11fd2c2281df8d6ea13126ff845f7825c89, 0xbbc15c2c34b54112c194ebc6cb5712cf77e58abd41a3b9a443a81a130fc4264d]
+2023-12-14 16:16:44 UTC Verifier #1 DEBUG engine  Zooming to epoch after block 0xbbc1…264d
+2023-12-14 16:16:44 UTC Verifier #1 TRACE finality  Building finality up to parent of 0x208b…0d0b (0xbbc1…264d)
+2023-12-14 16:16:44 UTC Verifier #1 TRACE finality  Ancestry iteration: yielding (0xbbc15c2c34b54112c194ebc6cb5712cf77e58abd41a3b9a443a81a130fc4264d, 1, [0xaccdb7a2268bc4af0a1898e725138888ba1ca6fc])
+2023-12-14 16:16:44 UTC Verifier #1 TRACE finality  Ancestry iteration: yielding (0xbfe31bba73707300851cc35f48404736295768320e2270e655ea6eb11d8005c9, 0, [0x0000000000000000000000000000000000000000])
+2023-12-14 16:16:44 UTC Verifier #1 TRACE finality  Rolling finality state: [(0xbbc15c2c34b54112c194ebc6cb5712cf77e58abd41a3b9a443a81a130fc4264d, 1, [0xaccdb7a2268bc4af0a1898e725138888ba1ca6fc])]
+2023-12-14 16:16:44 UTC Verifier #1 DEBUG finality  Finalizing blocks: [0xbbc15c2c34b54112c194ebc6cb5712cf77e58abd41a3b9a443a81a130fc4264d]
+2023-12-14 16:16:44 UTC Verifier #1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:16:44 UTC Verifier #1 TRACE engine  Fetched proposer for step 340514106: 0x4c97…3f79
+2023-12-14 16:16:44 UTC Verifier #1 TRACE miner  chain_new_blocks
+2023-12-14 16:16:44 UTC Verifier #1 TRACE miner  minimal_gas_price: recalibrating...
+2023-12-14 16:16:44 UTC Verifier #1 DEBUG miner  minimal_gas_price: Got gas price! 0
+2023-12-14 16:16:44 UTC Verifier #1 INFO import  Imported #2 0x208b…0d0b (0 txs, 0.00 Mgas, 20 ms, 0.56 KiB)
+2023-12-14 16:16:44 UTC Verifier #1 TRACE miner  update_sealing: imported internally sealed block
+2023-12-14 16:16:44 UTC Verifier #1 TRACE block_import  Flush block to db
+2023-12-14 16:16:44 UTC Verifier #1 TRACE block_import  Resignal verifier
+2023-12-14 16:16:44 UTC Worker Client0 TRACE block_import  fn import_verified_blocks
+2023-12-14 16:16:44 UTC Worker Client0 DEBUG engine  Zooming to epoch after block 0xbfe3…05c9
+2023-12-14 16:16:44 UTC Worker Client0 DEBUG engine  Zooming to epoch after block 0xbfe3…05c9
+2023-12-14 16:16:44 UTC Worker Client0 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:16:44 UTC Worker Client0 TRACE engine  Epoch begin, finalizing validators changes
+2023-12-14 16:16:44 UTC Worker Client0 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:16:44 UTC Worker Client0 TRACE engine  Skipping resending of queued malicious behavior reports
+2023-12-14 16:16:44 UTC Worker Client0 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:16:44 UTC Worker Client0 DEBUG engine  Expected topics for header 0x1df9…d801: [0x55252fa6eee4741b4e24a74a70e9c11fd2c2281df8d6ea13126ff845f7825c89, 0xbfe31bba73707300851cc35f48404736295768320e2270e655ea6eb11d8005c9]
+2023-12-14 16:16:44 UTC Worker Client0 TRACE block_import  Block #1(0x1df9…d801) check pass
+2023-12-14 16:16:44 UTC Worker Client0 DEBUG engine  Zooming to epoch after block 0xbfe3…05c9
+2023-12-14 16:16:44 UTC Worker Client0 TRACE finality  Building finality up to parent of 0x1df9…d801 (0xbfe3…05c9)
+2023-12-14 16:16:44 UTC Worker Client0 TRACE finality  Ancestry iteration: yielding (0xbfe31bba73707300851cc35f48404736295768320e2270e655ea6eb11d8005c9, 0, [0x0000000000000000000000000000000000000000])
+2023-12-14 16:16:44 UTC Worker Client0 TRACE finality  Rolling finality state: []
+2023-12-14 16:16:44 UTC Worker Client0 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:16:44 UTC Worker Client0 TRACE block_import  Block #1(0x1df9…d801) commited
+2023-12-14 16:16:44 UTC Worker Client0 TRACE block_import  Imported block, notify rest of system
+2023-12-14 16:16:44 UTC Worker Client0 TRACE block_import  Flush block to db
+2023-12-14 16:16:44 UTC Worker Client0 TRACE block_import  Resignal verifier
+2023-12-14 16:16:44 UTC Worker Client2 TRACE block_import  fn import_verified_blocks
+2023-12-14 16:16:44 UTC Worker Client2 DEBUG engine  Zooming to epoch after block 0xbbc1…264d
+2023-12-14 16:16:44 UTC Worker Client2 DEBUG engine  Author 0xaccd…a6fc built block with step gap. current step: 340514093, parent step: 340514090
+2023-12-14 16:16:44 UTC Worker Client2 TRACE engine  Fetched proposer for step 340514091: 0x4c97…3f79
+2023-12-14 16:16:44 UTC Worker Client2 TRACE engine  Fetched proposer for step 340514092: 0x90b2…fca0
+2023-12-14 16:16:44 UTC Worker Client2 TRACE engine  Reporting benign misbehaviour (cause: skipped step) at block #2, epoch set number 0, step proposer=0x90b2ce3741188bcfce25822113e93983ecacfca0. Own address: 0x4c97…3f79
+2023-12-14 16:16:44 UTC Worker Client2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:16:44 UTC Worker Client2 DEBUG engine  Zooming to epoch after block 0xbbc1…264d
+2023-12-14 16:16:44 UTC Worker Client2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:16:44 UTC Worker Client2 TRACE engine  Skipping resending of queued malicious behavior reports
+2023-12-14 16:16:44 UTC Worker Client2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:16:44 UTC Worker Client2 DEBUG engine  Expected topics for header 0x9d07…f37d: [0x55252fa6eee4741b4e24a74a70e9c11fd2c2281df8d6ea13126ff845f7825c89, 0xbbc15c2c34b54112c194ebc6cb5712cf77e58abd41a3b9a443a81a130fc4264d]
+2023-12-14 16:16:44 UTC Worker Client2 TRACE block_import  Block #2(0x9d07…f37d) check pass
+2023-12-14 16:16:44 UTC Worker Client2 DEBUG engine  Zooming to epoch after block 0xbbc1…264d
+2023-12-14 16:16:44 UTC Worker Client2 TRACE finality  Building finality up to parent of 0x9d07…f37d (0xbbc1…264d)
+2023-12-14 16:16:44 UTC Worker Client2 TRACE finality  Rolling finality state: []
+2023-12-14 16:16:44 UTC Worker Client2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:16:44 UTC Worker Client2 TRACE block_import  Block #2(0x9d07…f37d) commited
+2023-12-14 16:16:44 UTC Worker Client2 TRACE block_import  Imported block, notify rest of system
+2023-12-14 16:16:44 UTC Worker Client2 TRACE block_import  Flush block to db
+2023-12-14 16:16:44 UTC Worker Client2 TRACE block_import  Resignal verifier
+2023-12-14 16:16:44 UTC Worker Client1 TRACE block_import  fn import_verified_blocks
+2023-12-14 16:16:44 UTC Worker Client1 DEBUG engine  Zooming to epoch after block 0xbbc1…264d
+2023-12-14 16:16:44 UTC Worker Client1 TRACE engine  Validator 0x90b2…fca0 produced sibling blocks in the same step
+2023-12-14 16:16:44 UTC Worker Client1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:16:44 UTC Worker Client1 DEBUG engine  Author 0x90b2…fca0 built block with step gap. current step: 340514092, parent step: 340514090
+2023-12-14 16:16:44 UTC Worker Client1 TRACE engine  Fetched proposer for step 340514091: 0x4c97…3f79
+2023-12-14 16:16:44 UTC Worker Client1 DEBUG engine  Zooming to epoch after block 0xbbc1…264d
+2023-12-14 16:16:44 UTC Worker Client1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:16:44 UTC Worker Client1 TRACE engine  Skipping resending of queued malicious behavior reports
+2023-12-14 16:16:44 UTC Worker Client1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:16:44 UTC Worker Client1 DEBUG engine  Expected topics for header 0xcca4…fe8d: [0x55252fa6eee4741b4e24a74a70e9c11fd2c2281df8d6ea13126ff845f7825c89, 0xbbc15c2c34b54112c194ebc6cb5712cf77e58abd41a3b9a443a81a130fc4264d]
+2023-12-14 16:16:44 UTC Worker Client1 TRACE block_import  Block #2(0xcca4…fe8d) check pass
+2023-12-14 16:16:44 UTC Worker Client1 DEBUG engine  Zooming to epoch after block 0xbbc1…264d
+2023-12-14 16:16:44 UTC Worker Client1 TRACE finality  Building finality up to parent of 0xcca4…fe8d (0xbbc1…264d)
+2023-12-14 16:16:44 UTC Worker Client1 TRACE finality  Rolling finality state: []
+2023-12-14 16:16:44 UTC Worker Client1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:16:44 UTC Worker Client1 TRACE block_import  Block #2(0xcca4…fe8d) commited
+2023-12-14 16:16:44 UTC Worker Client1 TRACE block_import  Imported block, notify rest of system
+2023-12-14 16:16:44 UTC Worker Client1 TRACE miner  chain_new_blocks
+2023-12-14 16:16:44 UTC Worker Client1 TRACE miner  minimal_gas_price: recalibrating...
+2023-12-14 16:16:44 UTC Worker Client1 DEBUG miner  minimal_gas_price: Got gas price! 0
+2023-12-14 16:16:44 UTC Worker Client1 TRACE block_import  Flush block to db
+2023-12-14 16:16:44 UTC Worker Client1 TRACE block_import  Resignal verifier
+2023-12-14 16:16:48 UTC Worker Client0 INFO import    2/25 peers      5 KiB chain  0 bytes queue  RPC:  0 conn,    0 req/s,    0 µs
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  generate_seal: Issuing a block for step 340514106.
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE miner  update_sealing
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE miner  requires_reseal: sealing enabled
+2023-12-14 16:16:56 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0x208b…0d0b
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514107: 0x90b2…fca0
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  Not preparing block: not a proposer for step 340514107. (Our address: 0x4c97…3f79)
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE miner  requires_reseal: should_disable_sealing=false; forced=true, has_local=false, internal=NotReady, had_requests=false
+2023-12-14 16:16:56 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0x208b…0d0b
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514107: 0x90b2…fca0
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  Not preparing block: not a proposer for step 340514107. (Our address: 0x4c97…3f79)
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE miner  update_sealing
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE miner  requires_reseal: sealing enabled
+2023-12-14 16:16:56 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0x208b…0d0b
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514108: 0xaccd…a6fc
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  Not preparing block: not a proposer for step 340514108. (Our address: 0x4c97…3f79)
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE miner  requires_reseal: should_disable_sealing=false; forced=true, has_local=false, internal=NotReady, had_requests=false
+2023-12-14 16:16:56 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0x208b…0d0b
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514108: 0xaccd…a6fc
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  Not preparing block: not a proposer for step 340514108. (Our address: 0x4c97…3f79)
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE miner  update_sealing
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE miner  requires_reseal: sealing enabled
+2023-12-14 16:16:56 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0x208b…0d0b
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514109: 0x4c97…3f79
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE miner  requires_reseal: should_disable_sealing=false; forced=true, has_local=false, internal=Ready, had_requests=false
+2023-12-14 16:16:56 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0x208b…0d0b
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514109: 0x4c97…3f79
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE miner  update_sealing: preparing a block
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE miner  prepare_block: No existing work - making new block
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  Skipping POSDAO calls to validator set contracts
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  trying to get gas price on block number: 3
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  No gas price transition on block number 3
+2023-12-14 16:16:56 UTC Worker AuRa0 DEBUG miner  Attempting to push 0 transactions.
+2023-12-14 16:16:56 UTC Worker AuRa0 DEBUG miner  Pushed 0 transactions in 0 ms
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  Skipping resending of queued malicious behavior reports
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE miner  update_sealing: engine indicates internal sealing
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE miner  seal_block_internally: attempting internal seal.
+2023-12-14 16:16:56 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0x208b…0d0b
+2023-12-14 16:16:56 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514109: 0x4c97…3f79
+2023-12-14 16:17:18 UTC Worker Client1 INFO import    2/25 peers      6 KiB chain  0 bytes queue  RPC:  0 conn,    0 req/s,    0 µs
+2023-12-14 16:17:30 UTC Verifier #2 TRACE block_import  fn import_verified_blocks
+2023-12-14 16:17:30 UTC Verifier #2 DEBUG engine  Zooming to epoch after block 0x9d07…f37d
+2023-12-14 16:17:30 UTC Verifier #2 DEBUG engine  Author 0xaccd…a6fc built block with step gap. current step: 340514096, parent step: 340514093
+2023-12-14 16:17:30 UTC Verifier #2 TRACE engine  Fetched proposer for step 340514094: 0x4c97…3f79
+2023-12-14 16:17:30 UTC Verifier #2 TRACE engine  Fetched proposer for step 340514095: 0x90b2…fca0
+2023-12-14 16:17:30 UTC Verifier #2 TRACE engine  Reporting benign misbehaviour (cause: skipped step) at block #3, epoch set number 0, step proposer=0x90b2ce3741188bcfce25822113e93983ecacfca0. Own address: 0x4c97…3f79
+2023-12-14 16:17:30 UTC Verifier #2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:17:30 UTC Verifier #2 DEBUG engine  Zooming to epoch after block 0x9d07…f37d
+2023-12-14 16:17:30 UTC Verifier #2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:17:30 UTC Verifier #2 TRACE engine  Skipping resending of queued malicious behavior reports
+2023-12-14 16:17:30 UTC Verifier #2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:17:30 UTC Verifier #2 DEBUG engine  Expected topics for header 0xaf9d…4f60: [0x55252fa6eee4741b4e24a74a70e9c11fd2c2281df8d6ea13126ff845f7825c89, 0x9d07ff1ab4c264e8435e6326b0cfdd866920180864212e92ce7daa8a861af37d]
+2023-12-14 16:17:30 UTC Verifier #2 TRACE block_import  Block #3(0xaf9d…4f60) check pass
+2023-12-14 16:17:30 UTC Verifier #2 DEBUG engine  Zooming to epoch after block 0x9d07…f37d
+2023-12-14 16:17:30 UTC Verifier #2 TRACE finality  Building finality up to parent of 0xaf9d…4f60 (0x9d07…f37d)
+2023-12-14 16:17:30 UTC Verifier #2 TRACE finality  Ancestry iteration: yielding (0x9d07ff1ab4c264e8435e6326b0cfdd866920180864212e92ce7daa8a861af37d, 2, [0xaccdb7a2268bc4af0a1898e725138888ba1ca6fc])
+2023-12-14 16:17:30 UTC Verifier #2 TRACE finality  Rolling finality state: [(0x9d07ff1ab4c264e8435e6326b0cfdd866920180864212e92ce7daa8a861af37d, 2, [0xaccdb7a2268bc4af0a1898e725138888ba1ca6fc])]
+2023-12-14 16:17:30 UTC Verifier #2 INFO reorg  Reorg to #3 0xaf9d…4f60 (0x208b…0d0b #1 0xbbc1…264d 0x9d07…f37d)
+2023-12-14 16:17:30 UTC Verifier #2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:17:30 UTC Verifier #2 TRACE block_import  Block #3(0xaf9d…4f60) commited
+2023-12-14 16:17:30 UTC Verifier #2 TRACE block_import  Imported block, notify rest of system
+2023-12-14 16:17:30 UTC Verifier #2 TRACE miner  chain_new_blocks
+2023-12-14 16:17:30 UTC Verifier #2 TRACE miner  minimal_gas_price: recalibrating...
+2023-12-14 16:17:30 UTC Verifier #2 DEBUG miner  minimal_gas_price: Got gas price! 0
+2023-12-14 16:17:30 UTC Verifier #2 TRACE miner  update_sealing
+2023-12-14 16:17:30 UTC Verifier #2 TRACE miner  requires_reseal: sealing enabled
+2023-12-14 16:17:30 UTC Verifier #2 TRACE engine  Fetched proposer for step 340514109: 0x4c97…3f79
+2023-12-14 16:17:30 UTC Verifier #2 TRACE miner  requires_reseal: should_disable_sealing=false; forced=true, has_local=false, internal=Ready, had_requests=false
+2023-12-14 16:17:30 UTC Verifier #2 TRACE engine  Fetched proposer for step 340514109: 0x4c97…3f79
+2023-12-14 16:17:30 UTC Verifier #2 TRACE miner  update_sealing: preparing a block
+2023-12-14 16:17:30 UTC Verifier #2 TRACE miner  prepare_block: No existing work - making new block
+2023-12-14 16:17:30 UTC Verifier #2 TRACE engine  Skipping POSDAO calls to validator set contracts
+2023-12-14 16:17:30 UTC Verifier #2 TRACE engine  trying to get gas price on block number: 4
+2023-12-14 16:17:30 UTC Verifier #2 TRACE engine  No gas price transition on block number 4
+2023-12-14 16:17:30 UTC Verifier #2 DEBUG miner  Attempting to push 0 transactions.
+2023-12-14 16:17:30 UTC Verifier #2 DEBUG miner  Pushed 0 transactions in 0 ms
+2023-12-14 16:17:30 UTC Verifier #2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:17:30 UTC Verifier #2 TRACE engine  Skipping resending of queued malicious behavior reports
+2023-12-14 16:17:30 UTC Verifier #2 TRACE miner  update_sealing: engine indicates internal sealing
+2023-12-14 16:17:30 UTC Verifier #2 TRACE miner  seal_block_internally: attempting internal seal.
+2023-12-14 16:17:30 UTC Verifier #2 TRACE engine  Fetched proposer for step 340514109: 0x4c97…3f79
+2023-12-14 16:17:48 UTC Worker Client1 INFO import    2/25 peers      7 KiB chain  0 bytes queue  RPC:  0 conn,    0 req/s,    0 µs
+2023-12-14 16:18:18 UTC Worker Client2 INFO import    2/25 peers      7 KiB chain    3 KiB queue  RPC:  0 conn,    0 req/s,    0 µs
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  generate_seal: Issuing a block for step 340514109.
+2023-12-14 16:18:21 UTC Worker AuRa0 DEBUG engine  Author 0x4c97…3f79 built block with step gap. current step: 340514109, parent step: 340514091
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514092: 0x90b2…fca0
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Reporting benign misbehaviour (cause: skipped step) at block #3, epoch set number 0, step proposer=0x90b2ce3741188bcfce25822113e93983ecacfca0. Own address: 0x4c97…3f79
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514093: 0xaccd…a6fc
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Reporting benign misbehaviour (cause: skipped step) at block #3, epoch set number 0, step proposer=0xaccdb7a2268bc4af0a1898e725138888ba1ca6fc. Own address: 0x4c97…3f79
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514094: 0x4c97…3f79
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514095: 0x90b2…fca0
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  Received a Regular seal.
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:18:21 UTC Worker AuRa0 DEBUG engine  Expected topics for header 0x4765…61b9: [0x55252fa6eee4741b4e24a74a70e9c11fd2c2281df8d6ea13126ff845f7825c89, 0x208b49548f81216fbc626748b9980dd3719fe632a5ea5706b54fb8379ef60d0b]
+2023-12-14 16:18:21 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0x208b…0d0b
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE finality  Building finality up to parent of 0x4765…61b9 (0x208b…0d0b)
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE finality  Ancestry iteration: yielding (0x208b49548f81216fbc626748b9980dd3719fe632a5ea5706b54fb8379ef60d0b, 2, [0x4c9785451bb2ca3e91b350c06bcb5f974ca33f79])
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE finality  Rolling finality state: [(0x208b49548f81216fbc626748b9980dd3719fe632a5ea5706b54fb8379ef60d0b, 2, [0x4c9785451bb2ca3e91b350c06bcb5f974ca33f79])]
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:18:21 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0xaf9d…4f60
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514109: 0x4c97…3f79
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  chain_new_blocks
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  minimal_gas_price: recalibrating...
+2023-12-14 16:18:21 UTC Worker AuRa0 DEBUG miner  minimal_gas_price: Got gas price! 0
+2023-12-14 16:18:21 UTC Worker AuRa0 INFO import  Imported #3 0x4765…61b9 (0 txs, 0.00 Mgas, 21 ms, 0.56 KiB) + another 2 block(s) containing 0 tx(s)
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  update_sealing: imported internally sealed block
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  update_sealing
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  requires_reseal: sealing enabled
+2023-12-14 16:18:21 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0xaf9d…4f60
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514110: 0x90b2…fca0
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Not preparing block: not a proposer for step 340514110. (Our address: 0x4c97…3f79)
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  requires_reseal: should_disable_sealing=false; forced=true, has_local=false, internal=NotReady, had_requests=false
+2023-12-14 16:18:21 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0xaf9d…4f60
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514110: 0x90b2…fca0
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Not preparing block: not a proposer for step 340514110. (Our address: 0x4c97…3f79)
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  update_sealing
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  requires_reseal: sealing enabled
+2023-12-14 16:18:21 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0xaf9d…4f60
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514111: 0xaccd…a6fc
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Not preparing block: not a proposer for step 340514111. (Our address: 0x4c97…3f79)
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  requires_reseal: should_disable_sealing=false; forced=true, has_local=false, internal=NotReady, had_requests=false
+2023-12-14 16:18:21 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0xaf9d…4f60
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514111: 0xaccd…a6fc
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Not preparing block: not a proposer for step 340514111. (Our address: 0x4c97…3f79)
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  update_sealing
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  requires_reseal: sealing enabled
+2023-12-14 16:18:21 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0xaf9d…4f60
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514112: 0x4c97…3f79
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  requires_reseal: should_disable_sealing=false; forced=true, has_local=false, internal=Ready, had_requests=false
+2023-12-14 16:18:21 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0xaf9d…4f60
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514112: 0x4c97…3f79
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  update_sealing: preparing a block
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  prepare_block: No existing work - making new block
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Skipping POSDAO calls to validator set contracts
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  trying to get gas price on block number: 4
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  No gas price transition on block number 4
+2023-12-14 16:18:21 UTC Worker AuRa0 DEBUG miner  Attempting to push 0 transactions.
+2023-12-14 16:18:21 UTC Worker AuRa0 DEBUG miner  Pushed 0 transactions in 0 ms
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Skipping resending of queued malicious behavior reports
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  update_sealing: engine indicates internal sealing
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE miner  seal_block_internally: attempting internal seal.
+2023-12-14 16:18:21 UTC Worker AuRa0 DEBUG engine  Zooming to epoch after block 0xaf9d…4f60
+2023-12-14 16:18:21 UTC Worker AuRa0 TRACE engine  Fetched proposer for step 340514112: 0x4c97…3f79
+2023-12-14 16:18:48 UTC Worker Client1 INFO import    2/25 peers      8 KiB chain    3 KiB queue  RPC:  0 conn,    0 req/s,    0 µs
+2023-12-14 16:19:05 UTC Verifier #2 TRACE engine  generate_seal: Issuing a block for step 340514109.
+2023-12-14 16:19:05 UTC Verifier #2 DEBUG engine  Author 0x4c97…3f79 built block with step gap. current step: 340514109, parent step: 340514096
+2023-12-14 16:19:05 UTC Verifier #2 TRACE engine  Fetched proposer for step 340514097: 0x4c97…3f79
+2023-12-14 16:19:05 UTC Verifier #2 TRACE engine  Fetched proposer for step 340514098: 0x90b2…fca0
+2023-12-14 16:19:05 UTC Verifier #2 TRACE engine  Reporting benign misbehaviour (cause: skipped step) at block #4, epoch set number 0, step proposer=0x90b2ce3741188bcfce25822113e93983ecacfca0. Own address: 0x4c97…3f79
+2023-12-14 16:19:05 UTC Verifier #2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Verifier #2 TRACE engine  Fetched proposer for step 340514099: 0xaccd…a6fc
+2023-12-14 16:19:05 UTC Verifier #2 TRACE engine  Reporting benign misbehaviour (cause: skipped step) at block #4, epoch set number 0, step proposer=0xaccdb7a2268bc4af0a1898e725138888ba1ca6fc. Own address: 0x4c97…3f79
+2023-12-14 16:19:05 UTC Verifier #2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Verifier #2 TRACE engine  Fetched proposer for step 340514100: 0x4c97…3f79
+2023-12-14 16:19:05 UTC Verifier #2 TRACE engine  Fetched proposer for step 340514101: 0x90b2…fca0
+2023-12-14 16:19:05 UTC Verifier #2 TRACE miner  Received a Regular seal.
+2023-12-14 16:19:05 UTC Verifier #2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Verifier #2 DEBUG engine  Expected topics for header 0x55ff…dfd3: [0x55252fa6eee4741b4e24a74a70e9c11fd2c2281df8d6ea13126ff845f7825c89, 0xaf9d16a0e827fccd4c49e6a3b3a319003f7d7381634280a230d301048a054f60]
+2023-12-14 16:19:05 UTC Verifier #2 DEBUG engine  Zooming to epoch after block 0xaf9d…4f60
+2023-12-14 16:19:05 UTC Verifier #2 TRACE finality  Building finality up to parent of 0x55ff…dfd3 (0xaf9d…4f60)
+2023-12-14 16:19:05 UTC Verifier #2 TRACE finality  Ancestry iteration: yielding (0xaf9d16a0e827fccd4c49e6a3b3a319003f7d7381634280a230d301048a054f60, 3, [0xaccdb7a2268bc4af0a1898e725138888ba1ca6fc])
+2023-12-14 16:19:05 UTC Verifier #2 TRACE finality  Ancestry iteration: yielding (0x9d07ff1ab4c264e8435e6326b0cfdd866920180864212e92ce7daa8a861af37d, 2, [0xaccdb7a2268bc4af0a1898e725138888ba1ca6fc])
+2023-12-14 16:19:05 UTC Verifier #2 TRACE finality  Rolling finality state: [(0x9d07ff1ab4c264e8435e6326b0cfdd866920180864212e92ce7daa8a861af37d, 2, [0xaccdb7a2268bc4af0a1898e725138888ba1ca6fc]), (0xaf9d16a0e827fccd4c49e6a3b3a319003f7d7381634280a230d301048a054f60, 3, [0xaccdb7a2268bc4af0a1898e725138888ba1ca6fc])]
+2023-12-14 16:19:05 UTC Verifier #2 DEBUG finality  Finalizing blocks: [0x9d07ff1ab4c264e8435e6326b0cfdd866920180864212e92ce7daa8a861af37d, 0xaf9d16a0e827fccd4c49e6a3b3a319003f7d7381634280a230d301048a054f60]
+2023-12-14 16:19:05 UTC Verifier #2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Verifier #2 TRACE engine  Fetched proposer for step 340514112: 0x4c97…3f79
+2023-12-14 16:19:05 UTC Verifier #2 TRACE miner  chain_new_blocks
+2023-12-14 16:19:05 UTC Verifier #2 TRACE miner  minimal_gas_price: recalibrating...
+2023-12-14 16:19:05 UTC Verifier #2 DEBUG miner  minimal_gas_price: Got gas price! 0
+2023-12-14 16:19:05 UTC Verifier #2 INFO import  Imported #4 0x55ff…dfd3 (0 txs, 0.00 Mgas, 18 ms, 0.56 KiB)
+2023-12-14 16:19:05 UTC Verifier #2 TRACE miner  update_sealing: imported internally sealed block
+2023-12-14 16:19:05 UTC Verifier #2 TRACE block_import  Flush block to db
+2023-12-14 16:19:05 UTC Verifier #2 TRACE block_import  Resignal verifier
+2023-12-14 16:19:05 UTC Worker Client1 TRACE block_import  fn import_verified_blocks
+2023-12-14 16:19:05 UTC Worker Client1 DEBUG engine  Zooming to epoch after block 0xcca4…fe8d
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Validator 0xaccd…a6fc produced sibling blocks in the same step
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Worker Client1 DEBUG engine  Author 0xaccd…a6fc built block with step gap. current step: 340514096, parent step: 340514092
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Fetched proposer for step 340514093: 0xaccd…a6fc
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Reporting benign misbehaviour (cause: skipped step) at block #3, epoch set number 0, step proposer=0xaccdb7a2268bc4af0a1898e725138888ba1ca6fc. Own address: 0x4c97…3f79
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Fetched proposer for step 340514094: 0x4c97…3f79
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Fetched proposer for step 340514095: 0x90b2…fca0
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Reporting benign misbehaviour (cause: skipped step) at block #3, epoch set number 0, step proposer=0x90b2ce3741188bcfce25822113e93983ecacfca0. Own address: 0x4c97…3f79
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Worker Client1 DEBUG engine  Zooming to epoch after block 0xcca4…fe8d
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Skipping resending of queued malicious behavior reports
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Worker Client1 DEBUG engine  Expected topics for header 0xfc09…421b: [0x55252fa6eee4741b4e24a74a70e9c11fd2c2281df8d6ea13126ff845f7825c89, 0xcca48722a6cad8482b47839cf865242e683bceacc97b6c309d0af41d3fddfe8d]
+2023-12-14 16:19:05 UTC Worker Client1 TRACE block_import  Block #3(0xfc09…421b) check pass
+2023-12-14 16:19:05 UTC Worker Client1 DEBUG engine  Zooming to epoch after block 0xcca4…fe8d
+2023-12-14 16:19:05 UTC Worker Client1 TRACE finality  Building finality up to parent of 0xfc09…421b (0xcca4…fe8d)
+2023-12-14 16:19:05 UTC Worker Client1 TRACE finality  Ancestry iteration: yielding (0xcca48722a6cad8482b47839cf865242e683bceacc97b6c309d0af41d3fddfe8d, 2, [0x90b2ce3741188bcfce25822113e93983ecacfca0])
+2023-12-14 16:19:05 UTC Worker Client1 TRACE finality  Rolling finality state: [(0xcca48722a6cad8482b47839cf865242e683bceacc97b6c309d0af41d3fddfe8d, 2, [0x90b2ce3741188bcfce25822113e93983ecacfca0])]
+2023-12-14 16:19:05 UTC Worker Client1 DEBUG finality  Finalizing blocks: [0xcca48722a6cad8482b47839cf865242e683bceacc97b6c309d0af41d3fddfe8d]
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Worker Client1 TRACE block_import  Block #3(0xfc09…421b) commited
+2023-12-14 16:19:05 UTC Worker Client1 TRACE block_import  Imported block, notify rest of system
+2023-12-14 16:19:05 UTC Worker Client1 TRACE block_import  Flush block to db
+2023-12-14 16:19:05 UTC Worker Client1 TRACE block_import  Resignal verifier
+2023-12-14 16:19:05 UTC Worker Client1 TRACE block_import  fn import_verified_blocks
+2023-12-14 16:19:05 UTC Worker Client1 DEBUG engine  Zooming to epoch after block 0x208b…0d0b
+2023-12-14 16:19:05 UTC Worker Client1 DEBUG engine  Author 0x90b2…fca0 built block with step gap. current step: 340514098, parent step: 340514091
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Fetched proposer for step 340514092: 0x90b2…fca0
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Reporting benign misbehaviour (cause: skipped step) at block #3, epoch set number 0, step proposer=0x90b2ce3741188bcfce25822113e93983ecacfca0. Own address: 0x4c97…3f79
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Fetched proposer for step 340514093: 0xaccd…a6fc
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Reporting benign misbehaviour (cause: skipped step) at block #3, epoch set number 0, step proposer=0xaccdb7a2268bc4af0a1898e725138888ba1ca6fc. Own address: 0x4c97…3f79
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Fetched proposer for step 340514094: 0x4c97…3f79
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Fetched proposer for step 340514095: 0x90b2…fca0
+2023-12-14 16:19:05 UTC Worker Client1 DEBUG engine  Zooming to epoch after block 0x208b…0d0b
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Skipping resending of queued malicious behavior reports
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Worker Client1 DEBUG engine  Expected topics for header 0x4b95…072e: [0x55252fa6eee4741b4e24a74a70e9c11fd2c2281df8d6ea13126ff845f7825c89, 0x208b49548f81216fbc626748b9980dd3719fe632a5ea5706b54fb8379ef60d0b]
+2023-12-14 16:19:05 UTC Worker Client1 TRACE block_import  Block #3(0x4b95…072e) check pass
+2023-12-14 16:19:05 UTC Worker Client1 DEBUG engine  Zooming to epoch after block 0x208b…0d0b
+2023-12-14 16:19:05 UTC Worker Client1 TRACE finality  Building finality up to parent of 0x4b95…072e (0x208b…0d0b)
+2023-12-14 16:19:05 UTC Worker Client1 TRACE finality  Ancestry iteration: yielding (0x208b49548f81216fbc626748b9980dd3719fe632a5ea5706b54fb8379ef60d0b, 2, [0x4c9785451bb2ca3e91b350c06bcb5f974ca33f79])
+2023-12-14 16:19:05 UTC Worker Client1 TRACE finality  Rolling finality state: [(0x208b49548f81216fbc626748b9980dd3719fe632a5ea5706b54fb8379ef60d0b, 2, [0x4c9785451bb2ca3e91b350c06bcb5f974ca33f79])]
+2023-12-14 16:19:05 UTC Worker Client1 DEBUG finality  Finalizing blocks: [0x208b49548f81216fbc626748b9980dd3719fe632a5ea5706b54fb8379ef60d0b]
+2023-12-14 16:19:05 UTC Worker Client1 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Worker Client1 TRACE block_import  Block #3(0x4b95…072e) commited
+2023-12-14 16:19:05 UTC Worker Client1 TRACE block_import  Imported block, notify rest of system
+2023-12-14 16:19:05 UTC Worker Client1 TRACE block_import  Flush block to db
+2023-12-14 16:19:05 UTC Worker Client2 TRACE block_import  fn import_verified_blocks
+2023-12-14 16:19:05 UTC Worker Client2 DEBUG engine  Zooming to epoch after block 0xaf9d…4f60
+2023-12-14 16:19:05 UTC Worker Client2 TRACE engine  Validator 0x90b2…fca0 produced sibling blocks in the same step
+2023-12-14 16:19:05 UTC Worker Client2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Worker Client2 DEBUG engine  Author 0x90b2…fca0 built block with step gap. current step: 340514098, parent step: 340514096
+2023-12-14 16:19:05 UTC Worker Client2 TRACE engine  Fetched proposer for step 340514097: 0x4c97…3f79
+2023-12-14 16:19:05 UTC Worker Client2 DEBUG engine  Zooming to epoch after block 0xaf9d…4f60
+2023-12-14 16:19:05 UTC Worker Client2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Worker Client1 TRACE block_import  Resignal verifier
+2023-12-14 16:19:05 UTC Worker Client2 TRACE engine  Skipping resending of queued malicious behavior reports
+2023-12-14 16:19:05 UTC Worker Client2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Worker Client2 DEBUG engine  Expected topics for header 0x2bc4…04c5: [0x55252fa6eee4741b4e24a74a70e9c11fd2c2281df8d6ea13126ff845f7825c89, 0xaf9d16a0e827fccd4c49e6a3b3a319003f7d7381634280a230d301048a054f60]
+2023-12-14 16:19:05 UTC Worker Client2 TRACE block_import  Block #4(0x2bc4…04c5) check pass
+2023-12-14 16:19:05 UTC Worker Client2 DEBUG engine  Zooming to epoch after block 0xaf9d…4f60
+2023-12-14 16:19:05 UTC Worker Client2 TRACE finality  Building finality up to parent of 0x2bc4…04c5 (0xaf9d…4f60)
+2023-12-14 16:19:05 UTC Worker Client2 TRACE finality  Rolling finality state: []
+2023-12-14 16:19:05 UTC Worker Client2 INFO reorg  Reorg to #4 0x2bc4…04c5 (0x55ff…dfd3 #3 0xaf9d…4f60 )
+2023-12-14 16:19:05 UTC Worker Client2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Worker Client2 TRACE block_import  Block #4(0x2bc4…04c5) commited
+2023-12-14 16:19:05 UTC Worker Client2 TRACE block_import  Imported block, notify rest of system
+2023-12-14 16:19:05 UTC Worker Client2 TRACE miner  chain_new_blocks
+2023-12-14 16:19:05 UTC Worker Client2 TRACE miner  minimal_gas_price: recalibrating...
+2023-12-14 16:19:05 UTC Worker Client2 DEBUG miner  minimal_gas_price: Got gas price! 0
+2023-12-14 16:19:05 UTC Worker Client2 TRACE miner  update_sealing
+2023-12-14 16:19:05 UTC Worker Client2 TRACE miner  requires_reseal: sealing enabled
+2023-12-14 16:19:05 UTC Worker Client2 TRACE engine  Fetched proposer for step 340514112: 0x4c97…3f79
+2023-12-14 16:19:05 UTC Worker Client2 TRACE miner  requires_reseal: should_disable_sealing=false; forced=true, has_local=false, internal=Ready, had_requests=false
+2023-12-14 16:19:05 UTC Worker Client2 TRACE engine  Fetched proposer for step 340514112: 0x4c97…3f79
+2023-12-14 16:19:05 UTC Worker Client2 TRACE miner  update_sealing: preparing a block
+2023-12-14 16:19:05 UTC Worker Client2 TRACE miner  prepare_block: No existing work - making new block
+2023-12-14 16:19:05 UTC Worker Client2 TRACE engine  Skipping POSDAO calls to validator set contracts
+2023-12-14 16:19:05 UTC Worker Client2 TRACE engine  trying to get gas price on block number: 5
+2023-12-14 16:19:05 UTC Worker Client2 TRACE engine  No gas price transition on block number 5
+2023-12-14 16:19:05 UTC Worker Client2 DEBUG miner  Attempting to push 0 transactions.
+2023-12-14 16:19:05 UTC Worker Client2 DEBUG miner  Pushed 0 transactions in 0 ms
+2023-12-14 16:19:05 UTC Worker Client2 TRACE engine  Multi ValidatorSet retrieved for block 0.
+2023-12-14 16:19:05 UTC Worker Client2 TRACE engine  Skipping resending of queued malicious behavior reports
+2023-12-14 16:19:05 UTC Worker Client2 TRACE miner  update_sealing: engine indicates internal sealing
+2023-12-14 16:19:05 UTC Worker Client2 TRACE miner  seal_block_internally: attempting internal seal.
+2023-12-14 16:19:05 UTC Worker Client2 TRACE engine  Aborting seal generation. Can't propose.
+2023-12-14 16:19:05 UTC Worker Client2 TRACE block_import  Flush block to db
+2023-12-14 16:19:05 UTC Worker Client2 TRACE block_import  Resignal verifier
