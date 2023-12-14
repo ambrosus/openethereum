@@ -468,7 +468,6 @@ impl EpochManager {
         &mut self,
         client: &dyn EngineClient,
         machine: &EthereumMachine,
-        fees_params: Option<FeesParams>,
         validators: &dyn ValidatorSet,
         hash: H256,
     ) -> bool {
@@ -513,7 +512,6 @@ impl EpochManager {
                 .epoch_set(
                     first,
                     machine,
-                    fees_params,
                     signal_number, // use signal number so multi-set first calculation is correct.
                     set_proof,
                 )
@@ -1117,9 +1115,6 @@ impl AuthorityRound {
         Ok(engine)
     }
 
-    //TODO: Remove this function
-    // call fees contract's to get the actual gas price. Uses the latest block id
-
     // fetch correct validator set for epoch at header, taking into account
     // finality of previous transitions.
     fn epoch_set<'a>(
@@ -1131,12 +1126,9 @@ impl AuthorityRound {
         } else {
             let mut epoch_manager = self.epoch_manager.lock();
             let client = self.upgrade_client_or("Unable to verify sig")?;
-            let fees_params = self.current_fees_params(header);
-
             if !epoch_manager.zoom_to_after(
                 &*client,
                 &self.machine,
-                fees_params,
                 &*self.validators,
                 *header.parent_hash(),
             ) {
@@ -1274,11 +1266,9 @@ impl AuthorityRound {
         };
 
         let mut epoch_manager = self.epoch_manager.lock();
-        let fees_params = self.current_fees_params(chain_head);
         if !epoch_manager.zoom_to_after(
             &*client,
             &self.machine,
-            fees_params,
             &*self.validators,
             *chain_head.parent_hash(),
         ) {
@@ -1709,11 +1699,9 @@ impl Engine<EthereumMachine> for AuthorityRound {
             CowLike::Borrowed(&*self.validators)
         } else {
             let mut epoch_manager = self.epoch_manager.lock();
-            let fees_params = self.current_fees_params(&parent);
             if !epoch_manager.zoom_to_after(
                 &*client,
                 &self.machine,
-                fees_params,
                 &*self.validators,
                 parent.hash(),
             ) {
@@ -1750,11 +1738,9 @@ impl Engine<EthereumMachine> for AuthorityRound {
             CowLike::Borrowed(&*self.validators)
         } else {
             let mut epoch_manager = self.epoch_manager.lock();
-            let fees_params = self.current_fees_params(&parent);
             if !epoch_manager.zoom_to_after(
                 &*client,
                 &self.machine,
-                fees_params,
                 &*self.validators,
                 parent.hash(),
             ) {
@@ -2058,6 +2044,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
                                     t.with_signature(signature, Some(chain_id)),
                                 )?;
 
+                                trace!(target: "engine", "on_close_block: call self.current_fees_params");
                                 let fees_params = self.current_fees_params(&block.header);
 
                                 if let Err(e) = push_reward_transaction(
@@ -2435,7 +2422,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
 
     fn epoch_verifier<'a>(
         &self,
-        header: &Header,
+        _header: &Header,
         proof: &'a [u8],
     ) -> ConstructedVerifier<'a, EthereumMachine> {
         let (signal_number, set_proof, finality_proof) = match destructure_proofs(proof) {
@@ -2444,10 +2431,9 @@ impl Engine<EthereumMachine> for AuthorityRound {
         };
 
         let first = signal_number == 0;
-        let fees_params = self.current_fees_params(header);
         match self
             .validators
-            .epoch_set(first, &self.machine, fees_params, signal_number, set_proof)
+            .epoch_set(first, &self.machine, signal_number, set_proof)
         {
             Ok((list, finalize)) => {
                 let verifier = Box::new(EpochVerifier {
@@ -2544,30 +2530,35 @@ impl Engine<EthereumMachine> for AuthorityRound {
 
     /// Returns the gas price for the block calling the fees contract
     fn current_gas_price(&self, block: &mut ExecutedBlock) -> Option<U256> {
+        trace!(target: "engine", "trying to get gas price on block number: {}", block.header.number());
         let fees_contract_transition = self
             .fees_contract_transitions
             .range(..=block.header.number())
             .last();
 
         if let Some((_, contract)) = fees_contract_transition {
+            trace!(target: "engine", "Got transition on block number {}", block.header.number());
             let mut call = crate::engines::default_system_or_code_call(&self.machine, block);
             let gas_price = contract
                 .get_gas_price(&mut call)
                 .expect("Failed to get gas_price");
             return Some(gas_price);
         } else {
+            trace!(target: "engine", "No gas price transition on block number {}", block.header.number());
             return None;
         }
     }
 
     /// Return the params for the new transaction fee reward
     fn current_fees_params(&self, header: &Header) -> Option<crate::executive::FeesParams> {
+        trace!(target: "engine", "trying to get fees params on block number: {}", header.number());
         let fees_contract_transition = self
             .fees_contract_transitions
             .range(..=header.number())
             .last();
 
         if let Some((_, contract)) = fees_contract_transition {
+            trace!(target: "engine", "Got transition on block number {}", header.number());
             let client = self
                 .upgrade_client_or("Failed to upgrade the client")
                 .expect("Some error occured");
@@ -2582,9 +2573,13 @@ impl Engine<EthereumMachine> for AuthorityRound {
                     };
                     Some(fees_params)
                 }
-                _ => None,
+                _ => {
+                    debug!(target: "engine", "Failed to get the full client returning none fees client");
+                    None
+                }
             }
         } else {
+            trace!(target: "engine", "No fees transition on block number {}", header.number());
             None
         }
     }

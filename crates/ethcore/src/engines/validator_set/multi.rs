@@ -23,8 +23,6 @@ use ethereum_types::{Address, H256};
 use parking_lot::RwLock;
 use types::{header::Header, ids::BlockId, BlockNumber};
 
-use crate::executive::FeesParams;
-
 use super::{SystemCall, ValidatorSet};
 use client::EngineClient;
 use error::Error as EthcoreError;
@@ -150,14 +148,13 @@ impl ValidatorSet for Multi {
         &self,
         _first: bool,
         machine: &EthereumMachine,
-        fees_params: Option<FeesParams>,
         number: BlockNumber,
         proof: &[u8],
     ) -> Result<(super::SimpleList, Option<H256>), ::error::Error> {
         let (set_block, set) = self.correct_set_by_number(number);
         let first = set_block == number;
 
-        set.epoch_set(first, machine, fees_params, number, proof)
+        set.epoch_set(first, machine, number, proof)
     }
 
     fn contains_with_caller(&self, bh: &H256, address: &Address, caller: &Call) -> bool {

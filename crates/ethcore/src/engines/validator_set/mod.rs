@@ -35,8 +35,6 @@ use client::EngineClient;
 
 use error::Error as EthcoreError;
 
-use crate::executive::FeesParams;
-
 pub use self::simple_list::SimpleList;
 #[cfg(test)]
 pub use self::test::TestSet;
@@ -173,7 +171,6 @@ pub trait ValidatorSet: Send + Sync + 'static {
         &self,
         first: bool,
         machine: &EthereumMachine,
-        fees_params: Option<FeesParams>,
         number: BlockNumber,
         proof: &[u8],
     ) -> Result<(SimpleList, Option<H256>), ::error::Error>;

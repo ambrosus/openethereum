@@ -201,7 +201,6 @@ pub fn check_proof(
     root: H256,
     transaction: &SignedTransaction,
     machine: &Machine,
-    fees_params: Option<FeesParams>,
     env_info: &EnvInfo,
 ) -> ProvedExecution {
     let backend = self::backend::ProofCheck::new(proof);
@@ -221,7 +220,7 @@ pub fn check_proof(
     };
 
     let options = TransactOptions::with_no_tracing().save_output_from_contract();
-    match state.execute(env_info, machine, fees_params, transaction, options, true) {
+    match state.execute(env_info, machine, None, transaction, options, true) {
         Ok(executed) => ProvedExecution::Complete(Box::new(executed)),
         Err(ExecutionError::Internal(_)) => ProvedExecution::BadProof,
         Err(e) => ProvedExecution::Failed(e),
@@ -236,7 +235,6 @@ pub fn prove_transaction_virtual<H: AsHashDB<KeccakHasher, DBValue> + Send + Syn
     root: H256,
     transaction: &SignedTransaction,
     machine: &Machine,
-    fees_params: Option<FeesParams>,
     env_info: &EnvInfo,
     factories: Factories,
 ) -> Option<(Bytes, Vec<DBValue>)> {
@@ -255,7 +253,7 @@ pub fn prove_transaction_virtual<H: AsHashDB<KeccakHasher, DBValue> + Send + Syn
     let options = TransactOptions::with_no_tracing()
         .dont_check_nonce()
         .save_output_from_contract();
-    match state.execute(env_info, machine, fees_params, transaction, options, true) {
+    match state.execute(env_info, machine, None, transaction, options, true) {
         Err(ExecutionError::Internal(_)) => None,
         Err(e) => {
             trace!(target: "state", "Proved call failed: {}", e);

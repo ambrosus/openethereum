@@ -35,8 +35,6 @@ use types::{
 };
 use unexpected::Mismatch;
 
-use crate::executive::FeesParams;
-
 use super::{simple_list::SimpleList, SystemCall, ValidatorSet};
 use client::{traits::TransactionRequest, BlockChainClient, EngineClient};
 use machine::{AuxiliaryData, AuxiliaryRequest, Call, EthereumMachine};
@@ -71,12 +69,7 @@ impl ::engines::StateDependentProof<EthereumMachine> for StateProof {
         prove_initial(self.contract_address, &self.header, caller)
     }
 
-    fn check_proof(
-        &self,
-        machine: &EthereumMachine,
-        fees_params: Option<FeesParams>,
-        proof: &[u8],
-    ) -> Result<(), String> {
+    fn check_proof(&self, machine: &EthereumMachine, proof: &[u8]) -> Result<(), String> {
         let (header, state_items) =
             decode_first_proof(&Rlp::new(proof), machine.params().eip1559_transition)
                 .map_err(|e| format!("proof incorrectly encoded: {}", e))?;
@@ -84,14 +77,7 @@ impl ::engines::StateDependentProof<EthereumMachine> for StateProof {
             return Err("wrong header in proof".into());
         }
 
-        check_first_proof(
-            machine,
-            fees_params,
-            self.contract_address,
-            header,
-            &state_items,
-        )
-        .map(|_| ())
+        check_first_proof(machine, self.contract_address, header, &state_items).map(|_| ())
     }
 }
 
@@ -122,7 +108,6 @@ fn encode_first_proof(header: &Header, state_items: &[Vec<u8>]) -> Bytes {
 // check a first proof: fetch the validator set at the given block.
 fn check_first_proof(
     machine: &EthereumMachine,
-    fees_params: Option<FeesParams>,
     contract_address: Address,
     old_header: Header,
     state_items: &[DBValue],
@@ -168,7 +153,6 @@ fn check_first_proof(
         *old_header.state_root(),
         &tx,
         machine,
-        fees_params,
         &env_info,
     );
 
@@ -607,7 +591,6 @@ impl ValidatorSet for ValidatorSafeContract {
         &self,
         first: bool,
         machine: &EthereumMachine,
-        fees_params: Option<FeesParams>,
         _number: ::types::BlockNumber,
         proof: &[u8],
     ) -> Result<(SimpleList, Option<H256>), ::error::Error> {
@@ -620,14 +603,9 @@ impl ValidatorSet for ValidatorSafeContract {
                 decode_first_proof(&rlp, machine.params().eip1559_transition)?;
             let number = old_header.number();
             let old_hash = old_header.hash();
-            let addresses = check_first_proof(
-                machine,
-                fees_params,
-                self.contract_address,
-                old_header,
-                &state_items,
-            )
-            .map_err(::engines::EngineError::InsufficientProof)?;
+            let addresses =
+                check_first_proof(machine, self.contract_address, old_header, &state_items)
+                    .map_err(::engines::EngineError::InsufficientProof)?;
 
             trace!(target: "engine", "extracted epoch set at #{}: {} addresses",
 				number, addresses.len());

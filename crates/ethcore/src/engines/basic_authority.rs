@@ -185,7 +185,7 @@ impl Engine<EthereumMachine> for BasicAuthority {
 
         match self
             .validators
-            .epoch_set(first, &self.machine, None, header.number(), proof)
+            .epoch_set(first, &self.machine, header.number(), proof)
         {
             Ok((list, finalize)) => {
                 let verifier = Box::new(EpochVerifier { list: list });

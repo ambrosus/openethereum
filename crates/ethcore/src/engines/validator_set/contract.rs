@@ -28,8 +28,6 @@ use client::{traits::TransactionRequest, EngineClient};
 
 use error::Error as EthcoreError;
 
-use crate::executive::FeesParams;
-
 use super::{safe_contract::ValidatorSafeContract, SimpleList, SystemCall, ValidatorSet};
 
 use_contract!(validator_report, "res/contracts/validator_report.json");
@@ -175,12 +173,10 @@ impl ValidatorSet for ValidatorContract {
         &self,
         first: bool,
         machine: &EthereumMachine,
-        fees_params: Option<FeesParams>,
         number: BlockNumber,
         proof: &[u8],
     ) -> Result<(SimpleList, Option<H256>), ::error::Error> {
-        self.validators
-            .epoch_set(first, machine, fees_params, number, proof)
+        self.validators.epoch_set(first, machine, number, proof)
     }
 
     fn contains_with_caller(&self, bh: &H256, address: &Address, caller: &Call) -> bool {

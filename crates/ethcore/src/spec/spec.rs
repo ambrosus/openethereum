@@ -1109,7 +1109,6 @@ impl Spec {
                 *genesis.state_root(),
                 &tx,
                 self.engine.machine(),
-                None,
                 &env_info,
                 factories.clone(),
             );

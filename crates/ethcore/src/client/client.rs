@@ -843,9 +843,8 @@ impl Importer {
                             let options = TransactOptions::with_no_tracing().dont_check_nonce();
                             let machine = self.engine.machine();
                             let schedule = machine.schedule(env_info.number);
-                            let fees_params = self.engine.current_fees_params(header);
                             let res = Executive::new(&mut state, &env_info, &machine, &schedule)
-                                .transact(&transaction, options, fees_params);
+                                .transact(&transaction, options, None);
 
                             let res = match res {
                                 Err(e) => {
@@ -3193,7 +3192,6 @@ impl ProvingBlockChainClient for Client {
             header.state_root().clone(),
             &transaction,
             self.engine.machine(),
-            None,
             &env_info,
             self.factories.clone(),
         )
