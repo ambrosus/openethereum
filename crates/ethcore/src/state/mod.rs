@@ -1008,7 +1008,7 @@ impl<B: Backend> State<B> {
         let mut e = Executive::new(self, env_info, machine, &schedule);
 
         match virt {
-            true => e.transact_virtual(t, options),
+            true => e.transact_virtual(t, options, fees_params),
             false => e.transact(t, options, fees_params),
         }
     }

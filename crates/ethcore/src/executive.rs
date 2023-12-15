@@ -206,6 +206,7 @@ impl TransactOptions<trace::NoopTracer, trace::NoopVMTracer> {
 }
 
 /// Params for the new transactions fee system
+#[derive(Copy, Clone)]
 pub struct FeesParams {
     /// The address where governance part must be sent
     pub address: Address,
@@ -1100,6 +1101,7 @@ impl<'a, B: 'a + StateBackend> Executive<'a, B> {
         &'a mut self,
         t: &SignedTransaction,
         options: TransactOptions<T, V>,
+        fees_params: Option<FeesParams>,
     ) -> Result<Executed<T::Output, V::Output>, ExecutionError>
     where
         T: Tracer,
@@ -1117,7 +1119,7 @@ impl<'a, B: 'a + StateBackend> Executive<'a, B> {
                 .add_balance(&sender, &(needed_balance - balance), CleanupMode::NoEmpty)?;
         }
 
-        self.transact(t, options, None)
+        self.transact(t, options, fees_params)
     }
 
     /// Execute transaction/call with tracing enabled
