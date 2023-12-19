@@ -509,6 +509,11 @@ impl Miner {
         let mut senders_to_penalize = HashSet::new();
         let block_number = open_block.header.number();
 
+        if let Some(price) = open_block.current_gas_price() {
+            self.set_minimal_gas_price(price)
+                .expect("Failed to set the gas price");
+        }
+
         let mut tx_count = 0usize;
         let mut skipped_transactions = 0usize;
 

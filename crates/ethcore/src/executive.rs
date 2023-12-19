@@ -205,6 +205,15 @@ impl TransactOptions<trace::NoopTracer, trace::NoopVMTracer> {
     }
 }
 
+/// Params for the new transactions fee system
+#[derive(Copy, Clone)]
+pub struct FeesParams {
+    /// The address where governance part must be sent
+    pub address: Address,
+    /// The part of the fee what must be sent. Represent in millions parts
+    pub governance_part: U256,
+}
+
 /// Trap result returned by executive.
 pub type ExecutiveTrapResult<'a, T> =
     vm::TrapResult<T, CallCreateExecutive<'a>, CallCreateExecutive<'a>>;
@@ -1069,6 +1078,7 @@ impl<'a, B: 'a + StateBackend> Executive<'a, B> {
         &'a mut self,
         t: &SignedTransaction,
         options: TransactOptions<T, V>,
+        fees_params: Option<FeesParams>,
     ) -> Result<Executed<T::Output, V::Output>, ExecutionError>
     where
         T: Tracer,
@@ -1078,6 +1088,7 @@ impl<'a, B: 'a + StateBackend> Executive<'a, B> {
             t,
             options.check_nonce,
             options.output_from_init_contract,
+            fees_params,
             options.tracer,
             options.vm_tracer,
         )
@@ -1090,6 +1101,7 @@ impl<'a, B: 'a + StateBackend> Executive<'a, B> {
         &'a mut self,
         t: &SignedTransaction,
         options: TransactOptions<T, V>,
+        fees_params: Option<FeesParams>,
     ) -> Result<Executed<T::Output, V::Output>, ExecutionError>
     where
         T: Tracer,
@@ -1107,7 +1119,7 @@ impl<'a, B: 'a + StateBackend> Executive<'a, B> {
                 .add_balance(&sender, &(needed_balance - balance), CleanupMode::NoEmpty)?;
         }
 
-        self.transact(t, options)
+        self.transact(t, options, fees_params)
     }
 
     /// Execute transaction/call with tracing enabled
@@ -1116,6 +1128,7 @@ impl<'a, B: 'a + StateBackend> Executive<'a, B> {
         t: &SignedTransaction,
         check_nonce: bool,
         output_from_create: bool,
+        fees_params: Option<FeesParams>,
         mut tracer: T,
         mut vm_tracer: V,
     ) -> Result<Executed<T::Output, V::Output>, ExecutionError>
@@ -1314,6 +1327,7 @@ impl<'a, B: 'a + StateBackend> Executive<'a, B> {
             substate,
             result,
             output,
+            fees_params,
             tracer.drain(),
             vm_tracer.drain(),
         )?)
@@ -1472,6 +1486,7 @@ impl<'a, B: 'a + StateBackend> Executive<'a, B> {
         mut substate: Substate,
         result: vm::Result<FinalizationResult>,
         output: Bytes,
+        fees_params: Option<FeesParams>,
         trace: Vec<T>,
         vm_trace: Option<V>,
     ) -> Result<Executed<T, V>, ExecutionError> {
@@ -1548,11 +1563,29 @@ impl<'a, B: 'a + StateBackend> Executive<'a, B> {
             fees_value,
             &self.info.author
         );
-        self.state.add_balance(
-            &self.info.author,
-            &fees_value,
-            substate.to_cleanup_mode(&schedule),
-        )?;
+        if let Some(params) = fees_params {
+            let governance_part =
+                fees_value.saturating_mul(params.governance_part) / U256::from(1_000_000);
+            let validator_part = fees_value.saturating_sub(governance_part);
+
+            self.state.add_balance(
+                &params.address,
+                &governance_part,
+                substate.to_cleanup_mode(&schedule),
+            )?;
+
+            self.state.add_balance(
+                &self.info.author,
+                &validator_part,
+                substate.to_cleanup_mode(&schedule),
+            )?;
+        } else {
+            self.state.add_balance(
+                &self.info.author,
+                &fees_value,
+                substate.to_cleanup_mode(&schedule),
+            )?;
+        }
 
         if burnt_fee > U256::from(0)
             && self.machine.params().eip1559_fee_collector.is_some()

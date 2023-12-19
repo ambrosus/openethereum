@@ -159,7 +159,8 @@ impl Engine<EthereumMachine> for BasicAuthority {
     ) -> super::EpochChange<EthereumMachine> {
         // in test mode, always signal even though they don't be finalized.
         let first = header.number() == 0;
-        self.validators.signals_epoch_end(first, header, auxiliary, machine)
+        self.validators
+            .signals_epoch_end(first, header, auxiliary, machine)
     }
 
     fn is_epoch_end(

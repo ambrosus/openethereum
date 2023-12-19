@@ -24,7 +24,10 @@ mod null_engine;
 mod validator_set;
 
 pub mod block_reward;
+pub mod fees;
 pub mod signer;
+
+use crate::executive::FeesParams;
 
 pub use self::{
     authority_round::AuthorityRound,
@@ -62,10 +65,10 @@ use block::ExecutedBlock;
 use bytes::Bytes;
 use crypto::publickey::Signature;
 use ethereum_types::{Address, H256, H64, U256};
+use machine::EthereumMachine;
 use machine::{self, AuxiliaryData, AuxiliaryRequest, Machine};
 use types::ancestry_action::AncestryAction;
 use unexpected::{Mismatch, OutOfBounds};
-use machine::EthereumMachine;
 /// Default EIP-210 contract code.
 /// As defined in https://github.com/ethereum/EIPs/pull/210
 pub const DEFAULT_BLOCKHASH_CONTRACT: &'static str = "73fffffffffffffffffffffffffffffffffffffffe33141561006a5760014303600035610100820755610100810715156100455760003561010061010083050761010001555b6201000081071515610064576000356101006201000083050761020001555b5061013e565b4360003512151561008457600060405260206040f361013d565b61010060003543031315156100a857610100600035075460605260206060f361013c565b6101006000350715156100c55762010000600035430313156100c8565b60005b156100ea576101006101006000350507610100015460805260206080f361013b565b620100006000350715156101095763010000006000354303131561010c565b60005b1561012f57610100620100006000350507610200015460a052602060a0f361013a565b600060c052602060c0f35b5b5b5b5b";
@@ -434,7 +437,12 @@ pub trait Engine<M: Machine>: Sync + Send {
     /// Return `Yes` or `No` when the answer is definitively known.
     ///
     /// Should not interact with state.
-    fn signals_epoch_end<'a>(&self, _header: &Header, _aux: AuxiliaryData<'a>, _machine: &EthereumMachine) -> EpochChange<M> {
+    fn signals_epoch_end<'a>(
+        &self,
+        _header: &Header,
+        _aux: AuxiliaryData<'a>,
+        _machine: &EthereumMachine,
+    ) -> EpochChange<M> {
         EpochChange::No
     }
 
@@ -553,6 +561,16 @@ pub trait Engine<M: Machine>: Sync + Send {
     /// Overrides the block gas limit. Whenever this returns `Some` for a header, the next block's gas limit must be
     /// exactly that value. used by AuRa engine.
     fn gas_limit_override(&self, _header: &Header) -> Option<U256> {
+        None
+    }
+
+    /// Return the gas price for the block using the fees contract
+    fn current_gas_price(&self, _header: &Header) -> Option<U256> {
+        None
+    }
+
+    /// Return the fees params ysing the fees contract
+    fn current_fees_params(&self, _header: &Header) -> Option<FeesParams> {
         None
     }
 }

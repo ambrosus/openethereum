@@ -279,9 +279,11 @@ impl<'x> OpenBlock<'x> {
         } else {
             self.block.env_info()
         };
+        let fees_params = self.engine.current_fees_params(&self.block.header);
         let outcome = self.block.state.apply(
             &env_info,
             self.engine.machine(),
+            fees_params,
             &t,
             self.block.traces.is_enabled(),
         )?;
@@ -402,6 +404,11 @@ impl<'x> OpenBlock<'x> {
         );
 
         Ok(LockedBlock { block: s.block })
+    }
+
+    /// Returns the current gas price from the fees contract
+    pub fn current_gas_price(&self) -> Option<U256> {
+        self.engine.current_gas_price(&self.block.header)
     }
 
     #[cfg(test)]

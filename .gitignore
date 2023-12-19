@@ -45,3 +45,7 @@ rls/
 
 # cargo remote artifacts
 remote-target
+
+todo.txt
+todo.md
+test/
