@@ -2039,7 +2039,6 @@ impl Engine<EthereumMachine> for AuthorityRound {
                                     t.with_signature(signature, Some(chain_id)),
                                 )?;
 
-                                trace!(target: "engine", "on_close_block: call self.current_fees_params");
                                 if let Err(e) =
                                     push_reward_transaction(&self.machine, None, block, tx, None)
                                 {
