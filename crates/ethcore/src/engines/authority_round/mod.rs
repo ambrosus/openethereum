@@ -2040,15 +2040,9 @@ impl Engine<EthereumMachine> for AuthorityRound {
                                 )?;
 
                                 trace!(target: "engine", "on_close_block: call self.current_fees_params");
-                                let fees_params = self.current_fees_params(&block.header);
-
-                                if let Err(e) = push_reward_transaction(
-                                    &self.machine,
-                                    fees_params,
-                                    block,
-                                    tx,
-                                    None,
-                                ) {
+                                if let Err(e) =
+                                    push_reward_transaction(&self.machine, None, block, tx, None)
+                                {
                                     info!(target: "engine", "push_reward_transaction: {:?}", e);
                                 }
 
