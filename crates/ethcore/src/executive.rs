@@ -1101,7 +1101,6 @@ impl<'a, B: 'a + StateBackend> Executive<'a, B> {
         &'a mut self,
         t: &SignedTransaction,
         options: TransactOptions<T, V>,
-        fees_params: Option<FeesParams>,
     ) -> Result<Executed<T::Output, V::Output>, ExecutionError>
     where
         T: Tracer,
@@ -1119,7 +1118,7 @@ impl<'a, B: 'a + StateBackend> Executive<'a, B> {
                 .add_balance(&sender, &(needed_balance - balance), CleanupMode::NoEmpty)?;
         }
 
-        self.transact(t, options, fees_params)
+        self.transact(t, options, None)
     }
 
     /// Execute transaction/call with tracing enabled
