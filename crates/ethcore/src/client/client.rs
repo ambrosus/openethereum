@@ -108,7 +108,6 @@ pub use reth_util::queue::ExecutionQueue;
 pub use types::{block_status::BlockStatus, blockchain_info::BlockChainInfo};
 pub use verification::QueueInfo as BlockQueueInfo;
 
-use crate::executive::FeesParams;
 use_contract!(registry, "res/contracts/registrar.json");
 
 const ANCIENT_BLOCKS_QUEUE_SIZE: usize = 4096;
@@ -1621,7 +1620,6 @@ impl Client {
         state: &mut State<StateDB>,
         t: &SignedTransaction,
         analytics: CallAnalytics,
-        fees_params: Option<FeesParams>,
     ) -> Result<Executed, CallError> {
         fn call<V, T>(
             state: &mut State<StateDB>,
@@ -1630,7 +1628,6 @@ impl Client {
             state_diff: bool,
             transaction: &SignedTransaction,
             options: TransactOptions<T, V>,
-            fees_params: Option<FeesParams>,
         ) -> Result<Executed<T::Output, V::Output>, CallError>
         where
             T: trace::Tracer,
@@ -1644,11 +1641,8 @@ impl Client {
             };
             let schedule = machine.schedule(env_info.number);
 
-            let mut ret = Executive::new(state, env_info, &machine, &schedule).transact_virtual(
-                transaction,
-                options,
-                fees_params,
-            )?;
+            let mut ret = Executive::new(state, env_info, &machine, &schedule)
+                .transact_virtual(transaction, options)?;
 
             if let Some(original) = original_state {
                 ret.state_diff = Some(state.diff_from(original).map_err(ExecutionError::from)?);
@@ -1666,7 +1660,6 @@ impl Client {
                 state_diff,
                 t,
                 TransactOptions::with_tracing_and_vm_tracing(),
-                fees_params,
             ),
             (true, false) => call(
                 state,
@@ -1675,7 +1668,6 @@ impl Client {
                 state_diff,
                 t,
                 TransactOptions::with_tracing(),
-                fees_params,
             ),
             (false, true) => call(
                 state,
@@ -1684,7 +1676,6 @@ impl Client {
                 state_diff,
                 t,
                 TransactOptions::with_vm_tracing(),
-                fees_params,
             ),
             (false, false) => call(
                 state,
@@ -1693,7 +1684,6 @@ impl Client {
                 state_diff,
                 t,
                 TransactOptions::with_no_tracing(),
-                fees_params,
             ),
         }
     }
@@ -2021,16 +2011,8 @@ impl Call for Client {
             },
         };
         let machine = self.engine.machine();
-        let fees_params = self.engine.current_fees_params(header);
 
-        Self::do_virtual_call(
-            &machine,
-            &env_info,
-            state,
-            transaction,
-            analytics,
-            fees_params,
-        )
+        Self::do_virtual_call(&machine, &env_info, state, transaction, analytics)
     }
 
     fn call_many(
@@ -2052,7 +2034,6 @@ impl Call for Client {
 
         let mut results = Vec::with_capacity(transactions.len());
         let machine = self.engine.machine();
-        let fees_params = self.engine.current_fees_params(header);
 
         for &(ref t, analytics) in transactions {
             //if gas pricing is not defined, force base_fee to zero
@@ -2062,7 +2043,7 @@ impl Call for Client {
                 env_info.base_fee = header.base_fee()
             }
 
-            let ret = Self::do_virtual_call(machine, &env_info, state, t, analytics, fees_params)?;
+            let ret = Self::do_virtual_call(machine, &env_info, state, t, analytics)?;
             env_info.gas_used = ret.cumulative_gas_used;
             results.push(ret);
         }
@@ -2110,11 +2091,8 @@ impl Call for Client {
             let machine = self.engine.machine();
             let schedule = machine.schedule(env_info.number);
             // fees_params is None because they have no influence on gas
-            Executive::new(&mut clone, &env_info, &machine, &schedule).transact_virtual(
-                &tx,
-                options(),
-                None,
-            )
+            Executive::new(&mut clone, &env_info, &machine, &schedule)
+                .transact_virtual(&tx, options())
         };
 
         let cond = |gas| exec(gas).ok().map_or(false, |r| r.exception.is_none());
@@ -2214,8 +2192,6 @@ impl BlockChainClient for Client {
             .ok_or(CallError::StatePruned)?;
         let txs = body.transactions();
         let engine = self.engine.clone();
-        let header = self.block_header_decoded(block).unwrap();
-        let fees_params = engine.current_fees_params(&header);
 
         const PROOF: &'static str =
             "Transactions fetched from blockchain; blockchain transactions are valid; qed";
@@ -2225,9 +2201,8 @@ impl BlockChainClient for Client {
             let transaction_hash = t.hash();
             let t = SignedTransaction::new(t).expect(PROOF);
             let machine = engine.machine();
-            let x =
-                Self::do_virtual_call(machine, &env_info, &mut state, &t, analytics, fees_params)
-                    .expect(EXECUTE_PROOF);
+            let x = Self::do_virtual_call(machine, &env_info, &mut state, &t, analytics)
+                .expect(EXECUTE_PROOF);
             env_info.gas_used = env_info.gas_used + x.gas_used;
             (transaction_hash, x)
         })))
