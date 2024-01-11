@@ -569,10 +569,18 @@ pub trait Engine<M: Machine>: Sync + Send {
         None
     }
 
-    /// Return the fees params ysing the fees contract
+    /// Return the fees params using the fees contract
     fn current_fees_params(&self, _header: &Header) -> Option<FeesParams> {
         None
     }
+
+    /// Returns true if reward transaction is resently pushed. Needed to fix resealing timeout.
+    fn reward_transaction_pushed(&self) -> bool {
+        false
+    }
+
+    /// Reset reard transaction flag.
+    fn reset_reward_transaction_status(&self) {}
 }
 
 /// t_nb 9.3 Check whether a given block is the best block based on the default total difficulty rule.
