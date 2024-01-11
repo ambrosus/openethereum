@@ -725,6 +725,8 @@ pub struct AuthorityRound {
     /// https://www.xdaichain.com/for-validators/posdao-whitepaper
     posdao_transition: Option<BlockNumber>,
     fees_contract_transitions: BTreeMap<u64, FeesContract>,
+    /// Shows if reward transaction is pushed.
+    reward_transaction_pushed: Mutex<bool>,
 }
 
 // header-chain validator.
@@ -1095,6 +1097,7 @@ impl AuthorityRound {
             gas_limit_override_cache: Mutex::new(LruCache::new(GAS_LIMIT_OVERRIDE_CACHE_CAPACITY)),
             posdao_transition: our_params.posdao_transition,
             fees_contract_transitions: our_params.fees_contract_transitions,
+            reward_transaction_pushed: Mutex::new(false),
         });
 
         // Do not initialize timeouts for tests.
@@ -2043,6 +2046,8 @@ impl Engine<EthereumMachine> for AuthorityRound {
                                     push_reward_transaction(&self.machine, None, block, tx, None)
                                 {
                                     info!(target: "engine", "push_reward_transaction: {:?}", e);
+                                } else {
+                                    *self.reward_transaction_pushed.lock() = true;
                                 }
 
                                 let our_addr = signer.address();
@@ -2578,6 +2583,16 @@ impl Engine<EthereumMachine> for AuthorityRound {
             trace!(target: "engine", "No fees transition on block number {}", header.number());
             None
         }
+    }
+
+    /// Returns true if reward transaction is resently pushed. Needed to fix resealing timeout.
+    fn reward_transaction_pushed(&self) -> bool {
+        *self.reward_transaction_pushed.lock()
+    }
+
+    /// Reset reard transaction flag.
+    fn reset_reward_transaction_status(&self) {
+        *self.reward_transaction_pushed.lock() = false
     }
 }
 

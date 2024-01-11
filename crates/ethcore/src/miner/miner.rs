@@ -733,8 +733,16 @@ impl Miner {
             false
         } else {
             // sealing enabled and we don't want to sleep.
-            sealing.next_allowed_reseal = Instant::now(); // + self.options.reseal_min_period;
-            true
+            if self.engine.reward_transaction_pushed() {
+                // should have instant reseal after pushing reward transaction
+                sealing.next_allowed_reseal = Instant::now();
+                self.engine.reset_reward_transaction_status();
+                true
+            } else {
+                // should set delayed reseal in every other case
+                sealing.next_allowed_reseal = Instant::now() + self.options.reseal_min_period;
+                true
+            }
         }
     }
 
