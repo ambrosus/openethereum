@@ -689,11 +689,17 @@ where
     }
 
     fn gas_price(&self) -> BoxFuture<U256> {
-        Box::new(future::ok(default_gas_price(
+        let default_price = default_gas_price(
             &*self.client,
             &*self.miner,
             self.options.gas_price_percentile,
-        )))
+        );
+        let sensible_price = self.miner.sensible_gas_price();
+        if default_price < sensible_price {
+            Box::new(future::ok(sensible_price))
+        } else {
+            Box::new(future::ok(default_price))
+        }
     }
 
     fn max_priority_fee_per_gas(&self) -> BoxFuture<U256> {
