@@ -694,9 +694,9 @@ where
             &*self.miner,
             self.options.gas_price_percentile,
         );
-        let sensible_price = self.miner.sensible_gas_price();
-        if default_price < sensible_price {
-            Box::new(future::ok(sensible_price))
+        let minimal_price = self.miner.get_minimal_gas_price();
+        if default_price < minimal_price {
+            Box::new(future::ok(minimal_price))
         } else {
             Box::new(future::ok(default_price))
         }

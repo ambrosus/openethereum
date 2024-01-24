@@ -1062,6 +1062,10 @@ impl miner::MinerService for Miner {
         }
     }
 
+    fn get_minimal_gas_price(&self) -> U256 {
+        self.options.pool_verification_options.minimal_gas_price
+    }
+
     fn import_external_transactions<C: miner::BlockChainClient>(
         &self,
         chain: &C,
