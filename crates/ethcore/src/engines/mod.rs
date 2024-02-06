@@ -650,8 +650,9 @@ pub trait EthEngine: Engine<::machine::EthereumMachine> {
         &self,
         t: UnverifiedTransaction,
         header: &Header,
+		gas_price: Option<U256>,
     ) -> Result<SignedTransaction, transaction::Error> {
-        self.machine().verify_transaction_unordered(t, header)
+        self.machine().verify_transaction_unordered(t, header, gas_price)
     }
 
     /// Perform basic/cheap transaction verification.
