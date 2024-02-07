@@ -374,7 +374,13 @@ impl EthereumMachine {
         &self,
         t: UnverifiedTransaction,
         header: &Header,
+		gas_price: Option<U256>,
     ) -> Result<SignedTransaction, transaction::Error> {
+		if let Some(price) = gas_price {
+			if t.tx().gas_price < price {
+				return Err(transaction::Error::InsufficientGas { minimal: price, got: t.tx().gas_price });
+			}
+		}
         // ensure that the user was willing to at least pay the base fee
         if t.tx().gas_price < header.base_fee().unwrap_or_default() && !t.has_zero_gas_price() {
             return Err(transaction::Error::GasPriceLowerThanBaseFee {
