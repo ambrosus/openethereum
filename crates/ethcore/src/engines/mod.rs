@@ -574,6 +574,11 @@ pub trait Engine<M: Machine>: Sync + Send {
         None
     }
 
+	/// Return the address of the block reward contract for given block
+	fn current_block_reward_address(&self, _header: &Header) -> Option<Address> {
+		None
+	}
+
     /// Returns true if reward transaction is resently pushed. Needed to fix resealing timeout.
     fn reward_transaction_pushed(&self) -> bool {
         false
@@ -651,8 +656,9 @@ pub trait EthEngine: Engine<::machine::EthereumMachine> {
         t: UnverifiedTransaction,
         header: &Header,
 		gas_price: Option<U256>,
+		current_block_reward_address: Option<Address>,
     ) -> Result<SignedTransaction, transaction::Error> {
-        self.machine().verify_transaction_unordered(t, header, gas_price)
+        self.machine().verify_transaction_unordered(t, header, gas_price, current_block_reward_address)
     }
 
     /// Perform basic/cheap transaction verification.

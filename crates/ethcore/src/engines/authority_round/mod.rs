@@ -49,10 +49,7 @@ use crate::executive::FeesParams;
 
 use self::finality::RollingFinality;
 use super::{
-    fees::FeesContract,
-    signer::EngineSigner,
-    validator_set::{new_validator_set_posdao, SimpleList, ValidatorSet},
-    EthEngine,
+    fees::FeesContract, signer::EngineSigner, validator_set::{new_validator_set_posdao, SimpleList, ValidatorSet}, EthEngine
 };
 use block::*;
 use bytes::Bytes;
@@ -2584,6 +2581,25 @@ impl Engine<EthereumMachine> for AuthorityRound {
             None
         }
     }
+
+	fn current_block_reward_address(&self, header: &Header) -> Option<Address> {
+		let block_reward_mode_transition = self
+            .block_reward_mode_transitions
+            .range(..=header.number())
+            .last();
+
+		let block_reward_contract_transition = self
+            .block_reward_contract_transitions
+            .range(..=header.number())
+            .last();
+
+		if let Some((_, _)) = block_reward_mode_transition {
+			if let Some((_, contract)) = block_reward_contract_transition {
+				return contract.address();
+			}
+        }
+		return None;
+	}
 
     /// Returns true if reward transaction is resently pushed. Needed to fix resealing timeout.
     fn reward_transaction_pushed(&self) -> bool {
