@@ -22,6 +22,8 @@ use std::{
     sync::Arc,
 };
 
+use crate::crypto::publickey::public_to_address;
+
 use ethereum_types::{Address, H256, U256};
 use types::{
     header::Header,
@@ -376,11 +378,18 @@ impl EthereumMachine {
         header: &Header,
 		gas_price: Option<U256>,
     ) -> Result<SignedTransaction, transaction::Error> {
-		if let Some(price) = gas_price {
-			if t.tx().gas_price < price {
-				return Err(transaction::Error::InsufficientGas { minimal: price, got: t.tx().gas_price });
+		let public = t.recover_public()?;
+		let sender = public_to_address(&public);
+
+		if sender != *header.author() {
+			if let Some(price) = gas_price {
+				if t.tx().gas_price < price {
+					return Err(transaction::Error::InsufficientGas { minimal: price, got: t.tx().gas_price });
+				}
 			}
 		}
+
+
         // ensure that the user was willing to at least pay the base fee
         if t.tx().gas_price < header.base_fee().unwrap_or_default() && !t.has_zero_gas_price() {
             return Err(transaction::Error::GasPriceLowerThanBaseFee {
