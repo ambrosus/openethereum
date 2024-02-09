@@ -2522,7 +2522,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
     fn current_gas_price(&self, header: &Header) -> Option<U256> {
         let fees_contract_transition = self
             .fees_contract_transitions
-            .range(..=header.number())
+            .range(..=header.number()+1)
             .last();
 
         if let Some((_, contract)) = fees_contract_transition {
