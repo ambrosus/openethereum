@@ -145,7 +145,7 @@ pub struct AuthorityRoundParams {
     /// with POSDAO modifications.
     pub posdao_transition: Option<BlockNumber>,
     /// Fees contract addresses with their associated starting block numbers.
-    pub fees_contract_transitions: BTreeMap<u64, FeesContract>,
+    pub fees_contract_transitions: BTreeMap<u64, Address>,
 }
 
 const U16_MAX: usize = ::std::u16::MAX as usize;
@@ -242,7 +242,7 @@ impl From<ethjson::spec::AuthorityRoundParams> for AuthorityRoundParams {
             .fees_contract_transitions
             .unwrap_or_default()
             .into_iter()
-            .map(|(block_num, address)| (block_num.into(), FeesContract::new(address.into())))
+            .map(|(block_num, address)| (block_num.into(), address.into()))
             .collect();
         AuthorityRoundParams {
             step_durations,
@@ -2532,10 +2532,10 @@ impl Engine<EthereumMachine> for AuthorityRound {
                 .unwrap();
             match client.as_full_client() {
                 Some(client) => {
-                    let gas_price = contract
-                        .get_gas_price(&*client, BlockId::Hash(*header.parent_hash()))
-                        .expect("Failed to get gas_price");
-                    Some(gas_price)
+					//TODO: get signed tx, analytics params amd state
+					let result = client.call();
+
+					//Some(gas_price)
                 }
                 _ => {
                     debug!(target: "engine", "Failed to got full client for gas price. returning None");
