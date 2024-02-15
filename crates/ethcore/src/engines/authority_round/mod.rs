@@ -2518,16 +2518,25 @@ impl Engine<EthereumMachine> for AuthorityRound {
         limit
     }
 
-	fn current_fees_address(&self, block: BlockNumber) -> Option<Address> {
+	fn current_fees_address(&self, id: BlockId) -> Option<Address> {
+		let client = self
+			.upgrade_client_or("Failed to upgrade the client")
+			.expect("Failed to get client");
+		let header = client
+			.block_header(id)
+			.expect("Failed to get the block header")
+			.decode(self.params().eip1559_transition)
+			.expect("Failed to decode header");
+
 	    let fees_contract_transition = self
             .fees_contract_transitions
-            .range(..=block)
+            .range(..=header.number())
             .last();
 		if let Some((_, address)) = fees_contract_transition {
-			trace!(target: "engine", "Got fees contract transition on block number {}", block);
+			trace!(target: "engine", "Got fees contract transition on block number {}", header.number());
 			return Some(*address);
 		} else {
-			trace!(target: "engine", "No fees contract transition on blcok number {}", block);
+			trace!(target: "engine", "No fees contract transition on blcok number {}", header.number());
 			return None;
 		}
 

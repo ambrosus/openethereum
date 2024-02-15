@@ -56,6 +56,7 @@ use snapshot::SnapshotComponents;
 use spec::CommonParams;
 use types::{
     header::{ExtendedHeader, Header},
+	ids::BlockId,
     transaction::{self, SignedTransaction, UnverifiedTransaction},
     BlockNumber,
 };
@@ -565,7 +566,7 @@ pub trait Engine<M: Machine>: Sync + Send {
     }
 
 	/// Returns the fees contract address for given block
-	fn current_fees_address(&self, _block: BlockNumber) -> Option<Address> {
+	fn current_fees_address(&self, _id: BlockId) -> Option<Address> {
 		None
 	}
 
