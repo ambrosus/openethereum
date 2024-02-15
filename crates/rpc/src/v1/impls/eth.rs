@@ -690,14 +690,6 @@ where
     }
 
     fn gas_price(&self) -> BoxFuture<U256> {
-        //TODO: get the gas price from the contract girectly
-        // + get the contract address
-        // + create the tx
-        // + get state and header on the latest block
-        // - make the tx call
-        // - decode the resul
-        // - return decoded result
-
         let addr = self.client.engine().current_fees_address(BlockId::Latest);
         if let Some(address) = addr {
             let tx = TypedTransaction::Legacy(types::transaction::Transaction {
