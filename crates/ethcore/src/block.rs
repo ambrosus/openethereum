@@ -308,7 +308,8 @@ impl<'x> OpenBlock<'x> {
             .expect("receipt just pushed; qed"))
     }
 
-	fn get_current_gas_price(&self) -> Option<U256> {
+	/// Returns gas price getted from from contract during block creation
+	pub fn get_current_gas_price(&self) -> Option<U256> {
 		self.gas_price
 	}
 
