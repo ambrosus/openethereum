@@ -24,7 +24,6 @@ mod null_engine;
 mod validator_set;
 
 pub mod block_reward;
-pub mod fees;
 pub mod signer;
 
 use crate::{executive::FeesParams, state_db::StateDB};
