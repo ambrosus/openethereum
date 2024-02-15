@@ -27,7 +27,7 @@ pub mod block_reward;
 pub mod fees;
 pub mod signer;
 
-use crate::executive::FeesParams;
+use crate::{executive::FeesParams, state_db::StateDB};
 
 pub use self::{
     authority_round::AuthorityRound,
@@ -50,13 +50,15 @@ use std::{
     sync::{Arc, Weak},
 };
 
+use state::State;
+
 use builtin::Builtin;
 use error::Error;
 use snapshot::SnapshotComponents;
 use spec::CommonParams;
 use types::{
+	call_analytics::CallAnalytics,
     header::{ExtendedHeader, Header},
-	ids::BlockId,
     transaction::{self, SignedTransaction, UnverifiedTransaction},
     BlockNumber,
 };
@@ -566,15 +568,14 @@ pub trait Engine<M: Machine>: Sync + Send {
     }
 
 	/// Returns the fees contract address for given block
-	fn current_fees_address(&self, _id: BlockId) -> Option<Address> {
+	fn current_fees_address(&self, _header: &Header) -> Option<Address> {
 		None
 	}
 
-	//TODO: Remove current_gas_price
-    /// Return the gas price for the block using the fees contract
-    fn current_gas_price(&self, _header: &Header) -> Option<U256> {
-        None
-    }
+	/// Proxys the call to the EngineClient::call
+	fn proxy_call(&self, _transaction: &SignedTransaction, _analytics: CallAnalytics, _state: &mut State<StateDB>, _header: &Header) -> Option<Bytes> {
+		None
+	}
 
 	//TODO: Remove current_fees_params
     /// Return the fees params using the fees contract

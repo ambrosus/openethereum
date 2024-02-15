@@ -690,7 +690,16 @@ where
     }
 
     fn gas_price(&self) -> BoxFuture<U256> {
-        let addr = self.client.engine().current_fees_address(BlockId::Latest);
+		let header = try_bf!(self
+                	.client
+                	.block_header(BlockId::Latest)
+                	.ok_or_else(errors::state_pruned)
+                	.and_then(|h| h
+                    .decode(self.client.engine().params().eip1559_transition)
+                    .map_err(errors::decode)));
+
+        let addr = self.client.engine().current_fees_address(&header);
+
         if let Some(address) = addr {
             let tx = TypedTransaction::Legacy(types::transaction::Transaction {
                 nonce: self
@@ -709,13 +718,7 @@ where
                 .client
                 .state_at(BlockId::Latest)
                 .ok_or_else(errors::state_pruned));
-            let header = try_bf!(self
-                .client
-                .block_header(BlockId::Latest)
-                .ok_or_else(errors::state_pruned)
-                .and_then(|h| h
-                    .decode(self.client.engine().params().eip1559_transition)
-                    .map_err(errors::decode)));
+
             let result = self
                 .client
                 .call(&tx, Default::default(), &mut state, &header);

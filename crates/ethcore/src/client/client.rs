@@ -3159,6 +3159,13 @@ impl super::traits::EngineClient for Client {
     fn block_header(&self, id: BlockId) -> Option<encoded::Header> {
         <dyn BlockChainClient>::block_header(self, id)
     }
+
+	fn proxy_call(&self, transaction: &SignedTransaction, analytics: CallAnalytics, state: &mut State<StateDB>, header: &Header) -> Option<Bytes> {
+		match self.call(transaction, analytics, state, header) {
+			Ok(executed) => Some(executed.output),
+			Err(_) => None,
+		}
+	}
 }
 
 impl ProvingBlockChainClient for Client {

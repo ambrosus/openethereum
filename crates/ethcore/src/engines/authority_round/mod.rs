@@ -21,7 +21,7 @@
 //! set this option to `0`, to use a 2/3 quorum from the beginning.
 //!
 //! To support on-chain governance, the [ValidatorSet] is pluggable: Aura supports simple
-//! constant lists of validators as well as smart contract-based dynamic validator sets.
+//! c well as smart contract-based dynamic validator sets.
 //! Misbehavior is reported to the [ValidatorSet] as well, so that e.g. governance contracts
 //! can penalize or ban attacker's nodes.
 //!
@@ -46,6 +46,8 @@ use std::{
 };
 
 use crate::executive::FeesParams;
+use crate::state_db::StateDB;
+use state::State;
 
 use self::finality::RollingFinality;
 use super::{
@@ -77,6 +79,7 @@ use rand::rngs::OsRng;
 use rlp::{encode, Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use time_utils::CheckedSystemTime;
 use types::{
+	call_analytics::CallAnalytics,
     ancestry_action::AncestryAction,
     header::{ExtendedHeader, Header},
     ids::BlockId,
@@ -1373,7 +1376,7 @@ impl AuthorityRound {
     }
 
     /// Returns the reference to the client, if registered.
-    fn upgrade_client_or<'a, T>(
+    pub fn upgrade_client_or<'a, T>(
         &self,
         opt_error_msg: T,
     ) -> Result<Arc<dyn EngineClient>, EngineError>
@@ -2518,17 +2521,19 @@ impl Engine<EthereumMachine> for AuthorityRound {
         limit
     }
 
-	fn current_fees_address(&self, id: BlockId) -> Option<Address> {
+	fn proxy_call(&self, transaction: &SignedTransaction, analytics: CallAnalytics, state: &mut State<StateDB>, header: &Header) -> Option<Bytes> {
 		let client = self
-			.upgrade_client_or("Failed to upgrade the client")
-			.expect("Failed to get client");
-		let header = client
-			.block_header(id)
-			.expect("Failed to get the block header")
-			.decode(self.params().eip1559_transition)
-			.expect("Failed to decode header");
+			.upgrade_client_or("Failed to upgrade to client")
+			.expect("Failed to get the client");
+		client.proxy_call(
+			transaction,
+			analytics,
+			state,
+			header)
+	}
 
-	    let fees_contract_transition = self
+	fn current_fees_address(&self, header: &Header) -> Option<Address> {
+		let fees_contract_transition = self
             .fees_contract_transitions
             .range(..=header.number())
             .last();
@@ -2539,19 +2544,9 @@ impl Engine<EthereumMachine> for AuthorityRound {
 			trace!(target: "engine", "No fees contract transition on blcok number {}", header.number());
 			return None;
 		}
-
 	}
 
-    /// Returns the gas price for the block calling the fees contract
-    fn current_gas_price(&self, header: &Header) -> Option<U256> {
-        let fees_contract_transition = self
-            .fees_contract_transitions
-            .range(..=header.number())
-            .last();
-		return None;
-   }
-
-    /// Return the params for the new transaction fee reward
+   /// Return the params for the new transaction fee reward
     fn current_fees_params(&self, _header: &Header) -> Option<crate::executive::FeesParams> {
         //let fees_contract_transition = self
         //    .fees_contract_transitions
