@@ -564,11 +564,18 @@ pub trait Engine<M: Machine>: Sync + Send {
         None
     }
 
+	/// Returns the fees contract address for given block
+	fn current_fees_address(&self, _block: BlockNumber) -> Option<Address> {
+		None
+	}
+
+	//TODO: Remove current_gas_price
     /// Return the gas price for the block using the fees contract
     fn current_gas_price(&self, _header: &Header) -> Option<U256> {
         None
     }
 
+	//TODO: Remove current_fees_params
     /// Return the fees params using the fees contract
     fn current_fees_params(&self, _header: &Header) -> Option<FeesParams> {
         None

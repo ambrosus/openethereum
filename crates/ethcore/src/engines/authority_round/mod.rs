@@ -49,7 +49,7 @@ use crate::executive::FeesParams;
 
 use self::finality::RollingFinality;
 use super::{
-    fees::FeesContract, signer::EngineSigner, validator_set::{new_validator_set_posdao, SimpleList, ValidatorSet}, EthEngine
+     signer::EngineSigner, validator_set::{new_validator_set_posdao, SimpleList, ValidatorSet}, EthEngine
 };
 use block::*;
 use bytes::Bytes;
@@ -721,7 +721,7 @@ pub struct AuthorityRound {
     /// modifications. For details about POSDAO, see the whitepaper:
     /// https://www.xdaichain.com/for-validators/posdao-whitepaper
     posdao_transition: Option<BlockNumber>,
-    fees_contract_transitions: BTreeMap<u64, FeesContract>,
+    fees_contract_transitions: BTreeMap<u64, Address>,
     /// Shows if reward transaction is pushed.
     reward_transaction_pushed: Mutex<bool>,
 }
@@ -2518,68 +2518,63 @@ impl Engine<EthereumMachine> for AuthorityRound {
         limit
     }
 
+	fn current_fees_address(&self, block: BlockNumber) -> Option<Address> {
+	    let fees_contract_transition = self
+            .fees_contract_transitions
+            .range(..=block)
+            .last();
+		if let Some((_, address)) = fees_contract_transition {
+			trace!(target: "engine", "Got fees contract transition on block number {}", block);
+			return Some(*address);
+		} else {
+			trace!(target: "engine", "No fees contract transition on blcok number {}", block);
+			return None;
+		}
+
+	}
+
     /// Returns the gas price for the block calling the fees contract
     fn current_gas_price(&self, header: &Header) -> Option<U256> {
         let fees_contract_transition = self
             .fees_contract_transitions
             .range(..=header.number())
             .last();
-
-        if let Some((_, contract)) = fees_contract_transition {
-            trace!(target: "engine", "Got gas price transition on block number {}", header.number());
-            let client = self
-                .upgrade_client_or("Failed to upgrade the client")
-                .unwrap();
-            match client.as_full_client() {
-                Some(client) => {
-					//TODO: get signed tx, analytics params amd state
-					let result = client.call();
-
-					//Some(gas_price)
-                }
-                _ => {
-                    debug!(target: "engine", "Failed to got full client for gas price. returning None");
-                    None
-                }
-            }
-        } else {
-            trace!(target: "engine", "No gas price transition on block number {}", header.number());
-            return None;
-        }
-    }
+		return None;
+   }
 
     /// Return the params for the new transaction fee reward
-    fn current_fees_params(&self, header: &Header) -> Option<crate::executive::FeesParams> {
-        let fees_contract_transition = self
-            .fees_contract_transitions
-            .range(..=header.number())
-            .last();
+    fn current_fees_params(&self, _header: &Header) -> Option<crate::executive::FeesParams> {
+        //let fees_contract_transition = self
+        //    .fees_contract_transitions
+        //    .range(..=header.number())
+        //    .last();
 
-        if let Some((_, contract)) = fees_contract_transition {
-            trace!(target: "engine", "Got fees params transition on block number {}", header.number());
-            let client = self
-                .upgrade_client_or("Failed to upgrade the client")
-                .expect("Some error occured");
-            match client.as_full_client() {
-                Some(client) => {
-                    let result = contract
-                        .get_fees_params(&*client, BlockId::Hash(*header.parent_hash()))
-                        .expect("Failed to get fees params");
-                    let fees_params = crate::executive::FeesParams {
-                        address: result.0,
-                        governance_part: result.1,
-                    };
-                    Some(fees_params)
-                }
-                _ => {
-                    debug!(target: "engine", "Failed to get the full client returning none fees client");
-                    None
-                }
-            }
-        } else {
-            trace!(target: "engine", "No fees transition on block number {}", header.number());
-            None
-        }
+//        if let Some((_, contract)) = fees_contract_transition {
+//            trace!(target: "engine", "Got fees params transition on block number {}", header.number());
+//            let client = self
+//                .upgrade_client_or("Failed to upgrade the client")
+//                .expect("Some error occured");
+//            match client.as_full_client() {
+//                Some(client) => {
+//                    let result = contract
+//                        .get_fees_params(&*client, BlockId::Hash(*header.parent_hash()))
+//                        .expect("Failed to get fees params");
+//                    let fees_params = crate::executive::FeesParams {
+//                        address: result.0,
+//                        governance_part: result.1,
+//                    };
+//                    Some(fees_params)
+//                }
+//                _ => {
+//                    debug!(target: "engine", "Failed to get the full client returning none fees client");
+//                    None
+//                }
+//            }
+//        } else {
+//            trace!(target: "engine", "No fees transition on block number {}", header.number());
+//            None
+//        }
+		None
     }
 
 	fn current_block_reward_address(&self, header: &Header) -> Option<Address> {
