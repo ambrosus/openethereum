@@ -2830,6 +2830,10 @@ impl BlockChainClient for Client {
     fn state_data(&self, hash: &H256) -> Option<Bytes> {
         self.state_db.read().journal_db().state(hash)
     }
+
+	fn latest_state_and_header_external(&self) -> (State<StateDB>, Header) {
+	    self.latest_state_and_header()
+	}
 }
 
 impl IoClient for Client {

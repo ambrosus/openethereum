@@ -317,7 +317,7 @@ impl<'x> OpenBlock<'x> {
 	fn update_gas_price(&mut self) {
 		if let Some(address) = self.engine.current_fees_address(&self.block.header) {
 			let tx = TypedTransaction::Legacy(types::transaction::Transaction {
-                nonce: self.block.state.nonce(Address::default()).unwrap(),
+                nonce: self.block.state.nonce(&Address::default()).unwrap(),
                 action: Action::Call(address),
                 gas: U256::from(50_000_000),
                 gas_price: U256::default(),

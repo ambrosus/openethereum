@@ -571,6 +571,11 @@ pub trait Engine<M: Machine>: Sync + Send {
 		None
 	}
 
+	/// Retruns the gas price from the latest known block
+	fn latest_gas_price(&self) -> Option<U256> {
+		None
+	}
+
 	/// Proxys the call to the EngineClient::call
 	fn proxy_call(&self, _transaction: &SignedTransaction, _analytics: CallAnalytics, _state: &mut State<StateDB>, _header: &Header) -> Option<Bytes> {
 		None

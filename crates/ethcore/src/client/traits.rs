@@ -492,6 +492,9 @@ pub trait BlockChainClient:
 
     /// Returns true, if underlying import queue is processing possible fork at the moment
     fn is_processing_fork(&self) -> bool;
+
+	/// Returns latest known state and header. Created only to get gas price on the verification stage.
+	fn latest_state_and_header_external(&self) -> (State<StateDB>, Header);
 }
 
 /// The data required for a `Client` to create a transaction.

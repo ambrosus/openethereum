@@ -32,17 +32,10 @@
 //!   software bug), e.g. if they proposed multiple blocks with the same step number.
 
 use std::{
-    cmp,
-    collections::{BTreeMap, BTreeSet, HashSet},
-    fmt,
-    iter::{self, FromIterator},
-    ops::Deref,
-    sync::{
+    cmp, collections::{BTreeMap, BTreeSet, HashSet}, default::Default, fmt, iter::{self, FromIterator}, ops::Deref, sync::{
         atomic::{AtomicBool, AtomicU64, Ordering as AtomicOrdering},
         Arc, Weak,
-    },
-    time::{Duration, UNIX_EPOCH},
-    u64,
+    }, time::{Duration, UNIX_EPOCH}, u64
 };
 
 use crate::executive::FeesParams;
@@ -2530,6 +2523,32 @@ impl Engine<EthereumMachine> for AuthorityRound {
 			analytics,
 			state,
 			header)
+	}
+
+	fn latest_gas_price(&self) -> Option<U256> {
+		let cl = self.upgrade_client_or("Failed to get the client").expect("Failed to get the client");
+		let client = cl.as_full_client().unwrap();
+		let (mut state, header) = client.latest_state_and_header_external();
+		if let Some(address) = self.current_fees_address(&header) {
+			let tx = TypedTransaction::Legacy(types::transaction::Transaction {
+				nonce: client.nonce(&Address::default(), BlockId::Latest).unwrap(),
+				action: Action::Call(address),
+				gas: U256::from(50_000_000),
+				gas_price: U256::zero(),
+				value: U256::default(),
+				data: vec![0x45, 0x52, 0x59, 0xcb],
+			})
+			.fake_sign(Address::default());
+
+			let result = self.proxy_call(&tx, Default::default(),&mut state, &header);
+			if let Some(bytes) = result {
+				Some(U256::from_big_endian(bytes.as_slice()))
+			} else {
+				None
+			}
+		} else {
+			None
+		}
 	}
 
 	fn current_fees_address(&self, header: &Header) -> Option<Address> {
