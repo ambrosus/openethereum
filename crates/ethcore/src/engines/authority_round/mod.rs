@@ -2565,41 +2565,6 @@ impl Engine<EthereumMachine> for AuthorityRound {
 		}
 	}
 
-   /// Return the params for the new transaction fee reward
-    fn current_fees_params(&self, _header: &Header) -> Option<crate::executive::FeesParams> {
-        //let fees_contract_transition = self
-        //    .fees_contract_transitions
-        //    .range(..=header.number())
-        //    .last();
-
-//        if let Some((_, contract)) = fees_contract_transition {
-//            trace!(target: "engine", "Got fees params transition on block number {}", header.number());
-//            let client = self
-//                .upgrade_client_or("Failed to upgrade the client")
-//                .expect("Some error occured");
-//            match client.as_full_client() {
-//                Some(client) => {
-//                    let result = contract
-//                        .get_fees_params(&*client, BlockId::Hash(*header.parent_hash()))
-//                        .expect("Failed to get fees params");
-//                    let fees_params = crate::executive::FeesParams {
-//                        address: result.0,
-//                        governance_part: result.1,
-//                    };
-//                    Some(fees_params)
-//                }
-//                _ => {
-//                    debug!(target: "engine", "Failed to get the full client returning none fees client");
-//                    None
-//                }
-//            }
-//        } else {
-//            trace!(target: "engine", "No fees transition on block number {}", header.number());
-//            None
-//        }
-		None
-    }
-
 	fn current_block_reward_address(&self, header: &Header) -> Option<Address> {
 		let block_reward_mode_transition = self
             .block_reward_mode_transitions

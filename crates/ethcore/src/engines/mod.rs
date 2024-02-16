@@ -26,7 +26,7 @@ mod validator_set;
 pub mod block_reward;
 pub mod signer;
 
-use crate::{executive::FeesParams, state_db::StateDB};
+use crate::state_db::StateDB;
 
 pub use self::{
     authority_round::AuthorityRound,
@@ -580,12 +580,6 @@ pub trait Engine<M: Machine>: Sync + Send {
 	fn proxy_call(&self, _transaction: &SignedTransaction, _analytics: CallAnalytics, _state: &mut State<StateDB>, _header: &Header) -> Option<Bytes> {
 		None
 	}
-
-	//TODO: Remove current_fees_params
-    /// Return the fees params using the fees contract
-    fn current_fees_params(&self, _header: &Header) -> Option<FeesParams> {
-        None
-    }
 
 	/// Return the address of the block reward contract for given block
 	fn current_block_reward_address(&self, _header: &Header) -> Option<Address> {
