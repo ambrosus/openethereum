@@ -1516,9 +1516,7 @@ impl miner::MinerService for Miner {
         let allow_non_eoa_sender = self
             .engine
             .allow_non_eoa_sender(chain.best_block_header().number() + 1);
-		//TODO: Use new mechanism
-        //let gas_price = self.engine.current_gas_price(&chain.best_block_header());
-		let gas_price = None;
+		let gas_price = self.engine.latest_gas_price();
         self.update_transaction_queue_limits(gas_limit, base_fee, allow_non_eoa_sender, gas_price);
 
         // t_nb 10.2 Then import all transactions from retracted blocks (retracted means from side chain).
