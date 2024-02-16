@@ -125,9 +125,19 @@ pub fn verify_block_unordered(
     } else {
         None
     };
+	//TODO:
+	// - Create tx
+	// - get fees address
+	// - call the proxy call
+	// - decode result
+	// - use it for verification
+	let mut gas_price = None;
+	if let Some(address) = self.engine.current_fees_address() {
+
+	}
+
 
 	//let gas_price = engine.current_gas_price(&header);
-	let gas_price = None;
 	let current_block_reward_address = engine.current_block_reward_address(&header);
 
     // t_nb 5.3 iterate over all transactions
