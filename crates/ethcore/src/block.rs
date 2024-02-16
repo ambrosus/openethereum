@@ -35,6 +35,7 @@ use std::{cmp, collections::HashSet, ops, sync::Arc};
 
 use bytes::Bytes;
 use ethereum_types::{Address, Bloom, H256, U256};
+use ethabi::Token;
 
 use engines::EthEngine;
 use error::{BlockError, Error};
@@ -55,6 +56,8 @@ use types::{
     transaction::{Error as TransactionError, SignedTransaction, TypedTransaction, Action},
 };
 
+use crate::executive::FeesParams;
+
 /// Block that is ready for transactions to be added.
 ///
 /// It's a bit like a Vec<Transaction>, except that whenever a transaction is pushed, we execute it and
@@ -63,6 +66,7 @@ pub struct OpenBlock<'x> {
     block: ExecutedBlock,
     engine: &'x dyn EthEngine,
 	gas_price: Option<U256>,
+	fees_params: Option<FeesParams>,
 }
 
 /// Just like `OpenBlock`, except that we've applied `Engine::on_close_block`, finished up the non-seal header fields,
@@ -190,6 +194,7 @@ impl<'x> OpenBlock<'x> {
             block: ExecutedBlock::new(state, last_hashes, tracing),
             engine: engine,
 			gas_price: None,
+			fees_params: None,
         };
 
         r.block.header.set_parent_hash(parent.hash());
@@ -221,6 +226,7 @@ impl<'x> OpenBlock<'x> {
         engine.on_new_block(&mut r.block, is_epoch_begin, &mut ancestry.into_iter())?;
 
 		r.update_gas_price();
+		r.update_fees_params();
 
         Ok(r)
     }
@@ -283,12 +289,10 @@ impl<'x> OpenBlock<'x> {
         } else {
             self.block.env_info()
         };
-		//TODO: Get data from self
-        let fees_params = self.engine.current_fees_params(&self.block.header);
         let outcome = self.block.state.apply(
             &env_info,
             self.engine.machine(),
-            fees_params,
+            self.fees_params,
             &t,
             self.block.traces.is_enabled(),
         )?;
@@ -334,7 +338,36 @@ impl<'x> OpenBlock<'x> {
 			}
 		}
 	}
-	//TODO: Impl set_current_fees_params.
+
+	/// Get the current fees params from the fees contract.
+	fn update_fees_params(&mut self) {
+		if let Some(address) = self.engine.current_fees_address(&self.block.header) {
+			let tx = TypedTransaction::Legacy(types::transaction::Transaction {
+				nonce: self.block.state.nonce(&Address::default()).unwrap(),
+				action: Action::Call(address),
+				gas: U256::from(50_000_000),
+				gas_price: U256::default(),
+				value: U256::default(),
+				data: vec![0xfd, 0x91, 0x97, 0x5a],
+			})
+			.fake_sign(Address::default());
+
+			let mut state = self.block.state.clone();
+			let header = self.block.header.clone();
+			let result = self.engine.proxy_call(&tx, Default::default(), &mut state, &header);
+			if let Some(bytes) = result {
+				let tokens = ethabi::decode(&[ethabi::ParamType::Address, ethabi::ParamType::Uint(256)], &bytes).unwrap();
+				if let (Some(Token::Address(address)), Some(Token::Uint(governance_part))) = (tokens.get(0), tokens.get(1)) {
+        			let params = FeesParams {
+        	    		address: *address,
+           		 		governance_part: *governance_part,
+        			};
+					self.fees_params = Some(params);
+    			}
+			}
+
+		}
+	}
 
     /// Push transactions onto the block.
     #[cfg(not(feature = "slow-blocks"))]
@@ -493,6 +526,7 @@ impl ClosedBlock {
             block: block,
             engine: engine,
 			gas_price: None,
+			fees_params: None,
         }
     }
 }
