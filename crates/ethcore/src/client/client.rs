@@ -2830,6 +2830,10 @@ impl BlockChainClient for Client {
     fn state_data(&self, hash: &H256) -> Option<Bytes> {
         self.state_db.read().journal_db().state(hash)
     }
+
+	fn latest_state_and_header_external(&self) -> (State<StateDB>, Header) {
+	    self.latest_state_and_header()
+	}
 }
 
 impl IoClient for Client {
@@ -3159,6 +3163,13 @@ impl super::traits::EngineClient for Client {
     fn block_header(&self, id: BlockId) -> Option<encoded::Header> {
         <dyn BlockChainClient>::block_header(self, id)
     }
+
+	fn proxy_call(&self, transaction: &SignedTransaction, analytics: CallAnalytics, state: &mut State<StateDB>, header: &Header) -> Option<Bytes> {
+		match self.call(transaction, analytics, state, header) {
+			Ok(executed) => Some(executed.output),
+			Err(_) => None,
+		}
+	}
 }
 
 impl ProvingBlockChainClient for Client {

@@ -535,10 +535,10 @@ impl Miner {
         let mut senders_to_penalize = HashSet::new();
         let block_number = open_block.header.number();
 
-        if let Some(price) = open_block.current_gas_price() {
-            self.set_minimal_gas_price(price)
-                .expect("Failed to set the gas price");
-        }
+        if let Some(price) = open_block.get_current_gas_price() {
+        	self.set_minimal_gas_price(price)
+               .expect("Failed to set the gas price");
+    	}
 
         let mut tx_count = 0usize;
         let mut skipped_transactions = 0usize;
@@ -1516,7 +1516,7 @@ impl miner::MinerService for Miner {
         let allow_non_eoa_sender = self
             .engine
             .allow_non_eoa_sender(chain.best_block_header().number() + 1);
-        let gas_price = self.engine.current_gas_price(&chain.best_block_header());
+		let gas_price = self.engine.latest_gas_price();
         self.update_transaction_queue_limits(gas_limit, base_fee, allow_non_eoa_sender, gas_price);
 
         // t_nb 10.2 Then import all transactions from retracted blocks (retracted means from side chain).

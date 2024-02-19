@@ -17,6 +17,7 @@
 //! Eth rpc implementation.
 
 use std::{
+    default::Default,
     sync::Arc,
     thread,
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
@@ -41,7 +42,7 @@ use types::{
     encoded,
     filter::Filter as EthcoreFilter,
     header::Header,
-    transaction::{LocalizedTransaction, SignedTransaction, TypedTransaction},
+    transaction::{Action, LocalizedTransaction, SignedTransaction, TypedTransaction},
     BlockNumber as EthBlockNumber,
 };
 
@@ -689,17 +690,54 @@ where
     }
 
     fn gas_price(&self) -> BoxFuture<U256> {
-        let default_price = default_gas_price(
-            &*self.client,
-            &*self.miner,
-            self.options.gas_price_percentile,
-        );
-        let minimal_price = self.miner.get_minimal_gas_price();
-        if default_price < minimal_price {
-            Box::new(future::ok(minimal_price))
+		let header = try_bf!(self
+                	.client
+                	.block_header(BlockId::Latest)
+                	.ok_or_else(errors::state_pruned)
+                	.and_then(|h| h
+                    .decode(self.client.engine().params().eip1559_transition)
+                    .map_err(errors::decode)));
+
+        let addr = self.client.engine().current_fees_address(&header);
+
+        if let Some(address) = addr {
+            let tx = TypedTransaction::Legacy(types::transaction::Transaction {
+                nonce: self
+                    .client
+                    .nonce(&Address::default(), BlockId::Latest)
+                    .unwrap_or_else(|| self.client.engine().account_start_nonce(0)),
+                action: Action::Call(address),
+                gas: U256::from(50_000_000),
+                gas_price: U256::default(),
+                value: U256::default(),
+                data: vec![0x45, 0x52, 0x59, 0xcb],
+            })
+            .fake_sign(Address::default());
+
+            let mut state = try_bf!(self
+                .client
+                .state_at(BlockId::Latest)
+                .ok_or_else(errors::state_pruned));
+
+            let result = self
+                .client
+                .call(&tx, Default::default(), &mut state, &header);
+			Box::new(future::done(
+				result
+					.map_err(errors::call)
+					.and_then(|executed| match executed.exception {
+                    	Some(ref exception) => Err(errors::vm(exception, &executed.output)),
+                    	None => Ok(executed),
+                	})
+					.map(|executed| U256::from_big_endian(executed.output.as_slice()))
+				))
         } else {
-            Box::new(future::ok(default_price))
-        }
+			Box::new(future::ok(default_gas_price(
+            	&*self.client,
+            	&*self.miner,
+            	self.options.gas_price_percentile,
+        	)))
+		}
     }
 
     fn max_priority_fee_per_gas(&self) -> BoxFuture<U256> {

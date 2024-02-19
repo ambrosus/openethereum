@@ -21,7 +21,7 @@
 //! set this option to `0`, to use a 2/3 quorum from the beginning.
 //!
 //! To support on-chain governance, the [ValidatorSet] is pluggable: Aura supports simple
-//! constant lists of validators as well as smart contract-based dynamic validator sets.
+//! c well as smart contract-based dynamic validator sets.
 //! Misbehavior is reported to the [ValidatorSet] as well, so that e.g. governance contracts
 //! can penalize or ban attacker's nodes.
 //!
@@ -32,24 +32,19 @@
 //!   software bug), e.g. if they proposed multiple blocks with the same step number.
 
 use std::{
-    cmp,
-    collections::{BTreeMap, BTreeSet, HashSet},
-    fmt,
-    iter::{self, FromIterator},
-    ops::Deref,
-    sync::{
+    cmp, collections::{BTreeMap, BTreeSet, HashSet}, default::Default, fmt, iter::{self, FromIterator}, ops::Deref, sync::{
         atomic::{AtomicBool, AtomicU64, Ordering as AtomicOrdering},
         Arc, Weak,
-    },
-    time::{Duration, UNIX_EPOCH},
-    u64,
+    }, time::{Duration, UNIX_EPOCH}, u64
 };
 
 use crate::executive::FeesParams;
+use crate::state_db::StateDB;
+use state::State;
 
 use self::finality::RollingFinality;
 use super::{
-    fees::FeesContract, signer::EngineSigner, validator_set::{new_validator_set_posdao, SimpleList, ValidatorSet}, EthEngine
+     signer::EngineSigner, validator_set::{new_validator_set_posdao, SimpleList, ValidatorSet}, EthEngine
 };
 use block::*;
 use bytes::Bytes;
@@ -77,6 +72,7 @@ use rand::rngs::OsRng;
 use rlp::{encode, Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use time_utils::CheckedSystemTime;
 use types::{
+	call_analytics::CallAnalytics,
     ancestry_action::AncestryAction,
     header::{ExtendedHeader, Header},
     ids::BlockId,
@@ -145,7 +141,7 @@ pub struct AuthorityRoundParams {
     /// with POSDAO modifications.
     pub posdao_transition: Option<BlockNumber>,
     /// Fees contract addresses with their associated starting block numbers.
-    pub fees_contract_transitions: BTreeMap<u64, FeesContract>,
+    pub fees_contract_transitions: BTreeMap<u64, Address>,
 }
 
 const U16_MAX: usize = ::std::u16::MAX as usize;
@@ -242,7 +238,7 @@ impl From<ethjson::spec::AuthorityRoundParams> for AuthorityRoundParams {
             .fees_contract_transitions
             .unwrap_or_default()
             .into_iter()
-            .map(|(block_num, address)| (block_num.into(), FeesContract::new(address.into())))
+            .map(|(block_num, address)| (block_num.into(), address.into()))
             .collect();
         AuthorityRoundParams {
             step_durations,
@@ -721,7 +717,7 @@ pub struct AuthorityRound {
     /// modifications. For details about POSDAO, see the whitepaper:
     /// https://www.xdaichain.com/for-validators/posdao-whitepaper
     posdao_transition: Option<BlockNumber>,
-    fees_contract_transitions: BTreeMap<u64, FeesContract>,
+    fees_contract_transitions: BTreeMap<u64, Address>,
     /// Shows if reward transaction is pushed.
     reward_transaction_pushed: Mutex<bool>,
 }
@@ -1373,7 +1369,7 @@ impl AuthorityRound {
     }
 
     /// Returns the reference to the client, if registered.
-    fn upgrade_client_or<'a, T>(
+    pub fn upgrade_client_or<'a, T>(
         &self,
         opt_error_msg: T,
     ) -> Result<Arc<dyn EngineClient>, EngineError>
@@ -2518,69 +2514,56 @@ impl Engine<EthereumMachine> for AuthorityRound {
         limit
     }
 
-    /// Returns the gas price for the block calling the fees contract
-    fn current_gas_price(&self, header: &Header) -> Option<U256> {
-        let fees_contract_transition = self
+	fn proxy_call(&self, transaction: &SignedTransaction, analytics: CallAnalytics, state: &mut State<StateDB>, header: &Header) -> Option<Bytes> {
+		let client = self
+			.upgrade_client_or("Failed to upgrade to client")
+			.expect("Failed to get the client");
+		client.proxy_call(
+			transaction,
+			analytics,
+			state,
+			header)
+	}
+
+	fn latest_gas_price(&self) -> Option<U256> {
+		let cl = self.upgrade_client_or("Failed to get the client").expect("Failed to get the client");
+		let client = cl.as_full_client().unwrap();
+		let (mut state, header) = client.latest_state_and_header_external();
+		if let Some(address) = self.current_fees_address(&header) {
+			let tx = TypedTransaction::Legacy(types::transaction::Transaction {
+				nonce: client.nonce(&Address::default(), BlockId::Latest).unwrap(),
+				action: Action::Call(address),
+				gas: U256::from(50_000_000),
+				gas_price: U256::zero(),
+				value: U256::default(),
+				data: vec![0x45, 0x52, 0x59, 0xcb],
+			})
+			.fake_sign(Address::default());
+
+			let result = self.proxy_call(&tx, Default::default(),&mut state, &header);
+			if let Some(bytes) = result {
+				Some(U256::from_big_endian(bytes.as_slice()))
+			} else {
+				None
+			}
+		} else {
+			None
+		}
+	}
+
+	fn current_fees_address(&self, header: &Header) -> Option<Address> {
+		let fees_contract_transition = self
             .fees_contract_transitions
             .range(..=header.number())
             .last();
-
-        if let Some((_, contract)) = fees_contract_transition {
-            trace!(target: "engine", "Got gas price transition on block number {}", header.number());
-            let client = self
-                .upgrade_client_or("Failed to upgrade the client")
-                .unwrap();
-            match client.as_full_client() {
-                Some(client) => {
-                    let gas_price = contract
-                        .get_gas_price(&*client, BlockId::Hash(*header.parent_hash()))
-                        .expect("Failed to get gas_price");
-                    Some(gas_price)
-                }
-                _ => {
-                    debug!(target: "engine", "Failed to got full client for gas price. returning None");
-                    None
-                }
-            }
-        } else {
-            trace!(target: "engine", "No gas price transition on block number {}", header.number());
-            return None;
-        }
-    }
-
-    /// Return the params for the new transaction fee reward
-    fn current_fees_params(&self, header: &Header) -> Option<crate::executive::FeesParams> {
-        let fees_contract_transition = self
-            .fees_contract_transitions
-            .range(..=header.number())
-            .last();
-
-        if let Some((_, contract)) = fees_contract_transition {
-            trace!(target: "engine", "Got fees params transition on block number {}", header.number());
-            let client = self
-                .upgrade_client_or("Failed to upgrade the client")
-                .expect("Some error occured");
-            match client.as_full_client() {
-                Some(client) => {
-                    let result = contract
-                        .get_fees_params(&*client, BlockId::Hash(*header.parent_hash()))
-                        .expect("Failed to get fees params");
-                    let fees_params = crate::executive::FeesParams {
-                        address: result.0,
-                        governance_part: result.1,
-                    };
-                    Some(fees_params)
-                }
-                _ => {
-                    debug!(target: "engine", "Failed to get the full client returning none fees client");
-                    None
-                }
-            }
-        } else {
-            trace!(target: "engine", "No fees transition on block number {}", header.number());
-            None
-        }
-    }
+		if let Some((_, address)) = fees_contract_transition {
+			trace!(target: "engine", "Got fees contract transition on block number {}", header.number());
+			return Some(*address);
+		} else {
+			trace!(target: "engine", "No fees contract transition on blcok number {}", header.number());
+			return None;
+		}
+	}
 
 	fn current_block_reward_address(&self, header: &Header) -> Option<Address> {
 		let block_reward_mode_transition = self

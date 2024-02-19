@@ -126,7 +126,7 @@ pub fn verify_block_unordered(
         None
     };
 
-	let gas_price = engine.current_gas_price(&header);
+	let latest_gas_price = engine.latest_gas_price();
 	let current_block_reward_address = engine.current_block_reward_address(&header);
 
     // t_nb 5.3 iterate over all transactions
@@ -135,7 +135,7 @@ pub fn verify_block_unordered(
         .into_iter()
         .map(|t| {
             // t_nb 5.3.1 call verify_unordered. Check signatures and calculate address
-            let t = engine.verify_transaction_unordered(t, &header, gas_price, current_block_reward_address)?;
+            let t = engine.verify_transaction_unordered(t, &header, latest_gas_price, current_block_reward_address)?;
             // t_nb 5.3.2 check if nonce is more then max nonce (EIP-168 and EIP169)
             if let Some(max_nonce) = nonce_cap {
                 if t.tx().nonce >= max_nonce {
