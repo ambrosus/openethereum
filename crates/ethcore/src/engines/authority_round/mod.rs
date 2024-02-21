@@ -42,6 +42,8 @@ use crate::executive::FeesParams;
 use crate::state_db::StateDB;
 use state::State;
 
+use ethabi::Token;
+
 use self::finality::RollingFinality;
 use super::{
      signer::EngineSigner, validator_set::{new_validator_set_posdao, SimpleList, ValidatorSet}, EthEngine
@@ -1448,6 +1450,35 @@ impl AuthorityRound {
 
         Ok(transactions)
     }
+
+	// Returns the fees params for given block if there is  some
+	fn get_fees_params(&self, block: &ExecutedBlock) -> Option<FeesParams> {
+		if let Some(address) = self.current_fees_address(&block.header) {
+			let tx = TypedTransaction::Legacy(types::transaction::Transaction {
+				nonce: block.state.nonce(&Address::default()).unwrap(),
+				action: Action::Call(address),
+				gas: U256::from(50_000_000),
+				gas_price: U256::default(),
+				value: U256::default(),
+				data: vec![0xfd, 0x91, 0x97, 0x5a],
+			})
+			.fake_sign(Address::default());
+
+			let mut state = block.state.clone();
+			let header = block.header.clone();
+			let result = self.proxy_call(&tx, Default::default(), &mut state, &header);
+			if let Some(bytes) = result {
+				let tokens = ethabi::decode(&[ethabi::ParamType::Address, ethabi::ParamType::Uint(256)], &bytes).unwrap();
+				if let (Some(Token::Address(address)), Some(Token::Uint(governance_part))) = (tokens.get(0), tokens.get(1)) {
+        			return Some(FeesParams {
+        	    		address: *address,
+           		 		governance_part: *governance_part,
+        			});
+    			}
+			}
+		}
+		None
+	}
 }
 
 fn unix_now() -> Duration {
@@ -1973,6 +2004,27 @@ impl Engine<EthereumMachine> for AuthorityRound {
         let author = *block.header.author();
         let number = block.header.number();
         beneficiaries.push((author, RewardKind::Author));
+
+		//TODO: Calculate fees sums
+		// + get the transition for fees for the block to wrap logic in the if statement
+		// - get the list of transactions from the block
+		// + get the fees params for this block
+		// - calculate fee for every transaction and sum the corresponding number
+		// - crate traces object
+		// - write the object to the traces on block
+		//
+
+		if let Some(params) = self.get_fees_params(block) {
+			let mut author_fees = 0;
+			let mut governance_fees = 0;
+
+			for tx in &block.transactions {
+				if let Some((author, governance)) = tx.get_fees(params.governance_part) {
+					author_fees = author_fees.saturating_add(author);
+					governance_fees = governance_fees.saturating_add(governance);
+				}
+			}
+		}
 
         let block_reward_contract_transition = self
             .block_reward_contract_transitions
