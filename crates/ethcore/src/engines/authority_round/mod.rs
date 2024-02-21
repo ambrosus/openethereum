@@ -2005,15 +2005,6 @@ impl Engine<EthereumMachine> for AuthorityRound {
         let number = block.header.number();
         beneficiaries.push((author, RewardKind::Author));
 
-		//TODO: Calculate fees sums
-		// + get the transition for fees for the block to wrap logic in the if statement
-		// + get the list of transactions from the block
-		// + get the fees params for this block
-		// + calculate fee for every transaction and sum the corresponding number
-		// - crate traces object
-		// - write the object to the traces on block
-		//
-
 		if let Some(params) = self.get_fees_params(block) {
 			let (author_fees, governance_fees) = block.transactions.iter()
 				.filter_map(|tx| tx.get_fees(params.governance_part))
