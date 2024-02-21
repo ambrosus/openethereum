@@ -2007,23 +2007,19 @@ impl Engine<EthereumMachine> for AuthorityRound {
 
 		//TODO: Calculate fees sums
 		// + get the transition for fees for the block to wrap logic in the if statement
-		// - get the list of transactions from the block
+		// + get the list of transactions from the block
 		// + get the fees params for this block
-		// - calculate fee for every transaction and sum the corresponding number
+		// + calculate fee for every transaction and sum the corresponding number
 		// - crate traces object
 		// - write the object to the traces on block
 		//
 
 		if let Some(params) = self.get_fees_params(block) {
-			let mut author_fees = 0;
-			let mut governance_fees = 0;
-
-			for tx in &block.transactions {
-				if let Some((author, governance)) = tx.get_fees(params.governance_part) {
-					author_fees = author_fees.saturating_add(author);
-					governance_fees = governance_fees.saturating_add(governance);
-				}
-			}
+			let (author_fees, governance_fees) = block.transactions.iter()
+				.filter_map(|tx| tx.get_fees(params.governance_part))
+				.fold((U256::zero(),U256::zero()), |(acc_author,acc_governance), (author, governance)| {
+					(acc_author.saturating_add(author), acc_governance.saturating_add(governance))
+				});
 		}
 
         let block_reward_contract_transition = self
