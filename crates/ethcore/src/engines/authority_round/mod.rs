@@ -38,7 +38,7 @@ use std::{
     }, time::{Duration, UNIX_EPOCH}, u64
 };
 
-use crate::executive::FeesParams;
+use crate::{executive::FeesParams, trace::{ExecutiveTracer, Tracer, RewardType}};
 use crate::state_db::StateDB;
 use state::State;
 
@@ -2020,9 +2020,19 @@ impl Engine<EthereumMachine> for AuthorityRound {
 				.fold((U256::zero(),U256::zero()), |(acc_author,acc_governance), (author, governance)| {
 					(acc_author.saturating_add(author), acc_governance.saturating_add(governance))
 				});
+
+			let author_addr = *block.header.author();
+			if let Tracing::Enabled(ref mut traces) = *block.traces_mut() {
+				let mut tracer = ExecutiveTracer::default();
+
+				tracer.trace_reward(author_addr, author_fees,  RewardType::Fees.into());
+				tracer.trace_reward(params.address, governance_fees, RewardType::Fees.into());
+
+			 	traces.push(tracer.drain().into());
+			}
 		}
 
-        let block_reward_contract_transition = self
+		let block_reward_contract_transition = self
             .block_reward_contract_transitions
             .range(..=block.header.number())
             .last();
