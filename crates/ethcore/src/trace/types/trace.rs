@@ -145,8 +145,6 @@ pub enum RewardType {
     EmptyStep,
     /// A reward directly attributed by an external protocol (e.g. block reward contract)
     External,
-	/// A transaction's fees sum trace
-	Fees
 }
 
 impl Encodable for RewardType {
@@ -156,7 +154,6 @@ impl Encodable for RewardType {
             RewardType::Uncle => 1,
             RewardType::EmptyStep => 2,
             RewardType::External => 3,
-			RewardType::Fees => 4,
         };
         Encodable::rlp_append(&v, s);
     }
@@ -170,7 +167,6 @@ impl Decodable for RewardType {
                 1 => RewardType::Uncle,
                 2 => RewardType::EmptyStep,
                 3 => RewardType::External,
-				4 => RewardType::Fees,
                 _ => return Err(DecoderError::Custom("Invalid value of RewardType item")),
             })
         })
