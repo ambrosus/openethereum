@@ -329,8 +329,6 @@ pub enum RewardType {
     EmptyStep,
     /// External (attributed as part of an external protocol)
     External,
-	/// Sum of transaction fees for a block
-	Fees,
 }
 
 impl From<trace::RewardType> for RewardType {
@@ -340,7 +338,6 @@ impl From<trace::RewardType> for RewardType {
             trace::RewardType::Uncle => RewardType::Uncle,
             trace::RewardType::EmptyStep => RewardType::EmptyStep,
             trace::RewardType::External => RewardType::External,
-			trace::RewardType::Fees => RewardType::Fees,
         }
     }
 }
