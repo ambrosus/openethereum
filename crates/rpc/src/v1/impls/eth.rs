@@ -972,9 +972,6 @@ where
 
     fn balance(&self, address: H160, num: Option<BlockNumber>) -> BoxFuture<U256> {
         let num = num.unwrap_or_default();
-        if address == H160::zero() {
-            return Box::new(future::done(serde::export::Ok(U256::zero())));
-        }
 
         try_bf!(check_known(&*self.client, num.clone()));
         let res = self
@@ -1011,63 +1008,33 @@ where
             }
         };
 
-        if address == H160::zero() {
-            try_bf!(check_known(&*self.client, num.clone()));
-            let res = match self.client.prove_account(key1, id) {
-                Some((proof, account)) => Ok(EthAccount {
-                    address,
-                    balance: U256::zero(),
-                    nonce: account.nonce,
-                    code_hash: account.code_hash,
-                    storage_hash: account.storage_root,
-                    account_proof: proof.into_iter().map(Bytes::new).collect(),
-                    storage_proof: values
-                        .into_iter()
-                        .filter_map(|storage_index| {
-                            let key2: H256 = storage_index;
-                            self.client.prove_storage(key1, keccak(key2), id).map(
-                                |(storage_proof, storage_value)| StorageProof {
-                                    key: key2.into_uint(),
-                                    value: storage_value.into_uint(),
-                                    proof: storage_proof.into_iter().map(Bytes::new).collect(),
-                                },
-                            )
-                        })
-                        .collect::<Vec<StorageProof>>(),
-                }),
-                None => Err(errors::state_pruned()),
-            };
+        try_bf!(check_known(&*self.client, num.clone()));
+        let res = match self.client.prove_account(key1, id) {
+            Some((proof, account)) => Ok(EthAccount {
+                address,
+                balance: account.balance,
+                nonce: account.nonce,
+                code_hash: account.code_hash,
+                storage_hash: account.storage_root,
+                account_proof: proof.into_iter().map(Bytes::new).collect(),
+                storage_proof: values
+                    .into_iter()
+                    .filter_map(|storage_index| {
+                        let key2: H256 = storage_index;
+                        self.client.prove_storage(key1, keccak(key2), id).map(
+                            |(storage_proof, storage_value)| StorageProof {
+                                key: key2.into_uint(),
+                                value: storage_value.into_uint(),
+                                proof: storage_proof.into_iter().map(Bytes::new).collect(),
+                            },
+                        )
+                    })
+                    .collect::<Vec<StorageProof>>(),
+            }),
+            None => Err(errors::state_pruned()),
+        };
 
-            Box::new(future::done(res))
-        } else {
-            try_bf!(check_known(&*self.client, num.clone()));
-            let res = match self.client.prove_account(key1, id) {
-                Some((proof, account)) => Ok(EthAccount {
-                    address,
-                    balance: account.balance,
-                    nonce: account.nonce,
-                    code_hash: account.code_hash,
-                    storage_hash: account.storage_root,
-                    account_proof: proof.into_iter().map(Bytes::new).collect(),
-                    storage_proof: values
-                        .into_iter()
-                        .filter_map(|storage_index| {
-                            let key2: H256 = storage_index;
-                            self.client.prove_storage(key1, keccak(key2), id).map(
-                                |(storage_proof, storage_value)| StorageProof {
-                                    key: key2.into_uint(),
-                                    value: storage_value.into_uint(),
-                                    proof: storage_proof.into_iter().map(Bytes::new).collect(),
-                                },
-                            )
-                        })
-                        .collect::<Vec<StorageProof>>(),
-                }),
-                None => Err(errors::state_pruned()),
-            };
-
-            Box::new(future::done(res))
-        }
+        Box::new(future::done(res))
     }
 
     fn storage_at(
