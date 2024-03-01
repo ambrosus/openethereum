@@ -978,15 +978,11 @@ impl SignedTransaction {
         self.transaction.is_unsigned()
     }
 
-	// Returns the author's part of fee and the governence part
-	pub fn get_fees(&self, part: U256) -> Option<(U256, U256)> {
+	/// Returns the gas price is the type of tx is Legacy
+	pub fn gas_price(&self) -> Option<U256> {
 		match &self.transaction.unsigned {
 			TypedTransaction::Legacy(tx) => {
-				//Assume that transaction is checked already
-				let (fees_value, _ ) = tx.gas.overflowing_mul(tx.gas_price);
-				let governance_part = fees_value.saturating_mul(part) / U256::from(1_000_000);
-            	let validator_part = fees_value.saturating_sub(part);
-				Some((validator_part, governance_part))
+				Some(tx.gas_price)
 			},
 			_ => None,
 		}

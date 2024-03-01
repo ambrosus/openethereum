@@ -2006,20 +2006,28 @@ impl Engine<EthereumMachine> for AuthorityRound {
         beneficiaries.push((author, RewardKind::Author));
 
 		if let Some(params) = self.get_fees_params(block) {
-			let (author_fees, governance_fees) = block.transactions.iter()
-				.filter_map(|tx| tx.get_fees(params.governance_part))
-				.fold((U256::zero(),U256::zero()), |(acc_author,acc_governance), (author, governance)| {
-					(acc_author.saturating_add(author), acc_governance.saturating_add(governance))
-				});
+			let (author_fees, governance_fees) = block.receipts.iter().enumerate()
+    			.filter_map(|(i, receipt)| {
+        			let tx = &block.transactions[i];
+        			tx.gas_price().map(|gas_price| (receipt, gas_price))
+    			})
+    		.fold((U256::zero(), U256::zero()), |(acc_author, acc_governance), (receipt, gas_price)| {
+        		match receipt.get_fees(params.governance_part, gas_price) {
+            		Some((auth, goven)) => (acc_author.saturating_add(auth), acc_governance.saturating_add(goven)),
+            		None => (acc_author, acc_governance),
+        		}
+    		});
 
 			let author_addr = *block.header.author();
 			if let Tracing::Enabled(ref mut traces) = *block.traces_mut() {
-				let mut tracer = ExecutiveTracer::default();
+				if author_fees != U256::zero() && governance_fees != U256::zero() {
+					let mut tracer = ExecutiveTracer::default();
 
-				tracer.trace_reward(author_addr, author_fees,  RewardType::Uncle.into());
-				tracer.trace_reward(params.address, governance_fees, RewardType::EmptyStep.into());
+					tracer.trace_reward(author_addr, author_fees,  RewardType::Uncle.into());
+					tracer.trace_reward(params.address, governance_fees, RewardType::EmptyStep.into());
 
-			 	traces.push(tracer.drain().into());
+			 		traces.push(tracer.drain().into());
+				}
 			}
 		}
 
