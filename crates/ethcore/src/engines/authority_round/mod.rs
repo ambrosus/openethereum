@@ -2020,7 +2020,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
 
 			let author_addr = *block.header.author();
 			if let Tracing::Enabled(ref mut traces) = *block.traces_mut() {
-				if author_fees != U256::zero() && governance_fees != U256::zero() {
+				if author_fees != U256::zero() {
 					let mut tracer = ExecutiveTracer::default();
 
 					tracer.trace_reward(author_addr, author_fees,  RewardType::Uncle.into());
