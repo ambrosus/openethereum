@@ -236,6 +236,19 @@ impl TypedReceipt {
             }
         }
     }
+
+	pub fn get_fees(&self, part: U256, gas_price: U256) -> Option<(U256, U256)> {
+		match self {
+			Self::Legacy(receipt) => {
+				//Assume that transaction is checked already
+				let (fees_value, _) = receipt.gas_used.overflowing_mul(gas_price);
+				let governance_part = fees_value.saturating_mul(part) / U256::from(1_000_000);
+            	let validator_part = fees_value.saturating_sub(part);
+				Some((validator_part, governance_part))
+			},
+			_ =>  None,
+		}
+	}
 }
 
 impl Deref for TypedReceipt {
