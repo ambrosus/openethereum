@@ -56,7 +56,7 @@ use types::{
     transaction::{Error as TransactionError, SignedTransaction, TypedTransaction, Action},
 };
 
-use crate::executive::FeesParams;
+use crate::{executive::FeesParams, trace::{ExecutiveTracer, Tracer, RewardType}};
 
 /// Block that is ready for transactions to be added.
 ///
@@ -439,6 +439,33 @@ impl<'x> OpenBlock<'x> {
     /// t_nb 8.5 Turn this into a `LockedBlock`.
     pub fn close_and_lock(self) -> Result<LockedBlock, Error> {
         let mut s = self;
+		// TODO: use fees params to calculate the fees and write them to the trace
+
+		if let Some(params) = s.fees_params {
+			let (author_fees, governance_fees) = s.block.receipts.iter().enumerate()
+    			.filter_map(|(i, receipt)| {
+        			let tx = &s.block.transactions[i];
+        			tx.gas_price().map(|gas_price| (receipt, gas_price))
+    			})
+    		.fold((U256::zero(), U256::zero()), |(acc_author, acc_governance), (receipt, gas_price)| {
+        		match receipt.get_fees(params.governance_part, gas_price) {
+            		Some((auth, goven)) => (acc_author.saturating_add(auth), acc_governance.saturating_add(goven)),
+            		None => (acc_author, acc_governance),
+        		}
+    		});
+
+			let author_addr = *s.block.header.author();
+			if let Tracing::Enabled(ref mut traces) = *s.block.traces_mut() {
+				let mut tracer = ExecutiveTracer::default();
+				if author_fees != U256::zero() {
+					tracer.trace_reward(author_addr, author_fees,  RewardType::Uncle.into());
+				}
+				if governance_fees != U256::zero() {
+					tracer.trace_reward(params.address, governance_fees, RewardType::EmptyStep.into());
+				}
+			 	traces.push(tracer.drain().into());
+			}
+		}
 
         // t_nb 8.5.1 engine applies block rewards (Ethash and AuRa do.Clique is empty)
         s.engine.on_close_block(&mut s.block)?;

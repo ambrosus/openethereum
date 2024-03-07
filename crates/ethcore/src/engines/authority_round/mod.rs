@@ -38,11 +38,9 @@ use std::{
     }, time::{Duration, UNIX_EPOCH}, u64
 };
 
-use crate::{executive::FeesParams, trace::{ExecutiveTracer, Tracer, RewardType}};
+use crate::executive::FeesParams;
 use crate::state_db::StateDB;
 use state::State;
-
-use ethabi::Token;
 
 use self::finality::RollingFinality;
 use super::{
@@ -1450,35 +1448,6 @@ impl AuthorityRound {
 
         Ok(transactions)
     }
-
-	// Returns the fees params for given block if there is  some
-	fn get_fees_params(&self, block: &ExecutedBlock) -> Option<FeesParams> {
-		if let Some(address) = self.current_fees_address(&block.header) {
-			let tx = TypedTransaction::Legacy(types::transaction::Transaction {
-				nonce: block.state.nonce(&Address::default()).unwrap(),
-				action: Action::Call(address),
-				gas: U256::from(50_000_000),
-				gas_price: U256::default(),
-				value: U256::default(),
-				data: vec![0xfd, 0x91, 0x97, 0x5a],
-			})
-			.fake_sign(Address::default());
-
-			let mut state = block.state.clone();
-			let header = block.header.clone();
-			let result = self.proxy_call(&tx, Default::default(), &mut state, &header);
-			if let Some(bytes) = result {
-				let tokens = ethabi::decode(&[ethabi::ParamType::Address, ethabi::ParamType::Uint(256)], &bytes).unwrap();
-				if let (Some(Token::Address(address)), Some(Token::Uint(governance_part))) = (tokens.get(0), tokens.get(1)) {
-        			return Some(FeesParams {
-        	    		address: *address,
-           		 		governance_part: *governance_part,
-        			});
-    			}
-			}
-		}
-		None
-	}
 }
 
 fn unix_now() -> Duration {
@@ -2004,32 +1973,6 @@ impl Engine<EthereumMachine> for AuthorityRound {
         let author = *block.header.author();
         let number = block.header.number();
         beneficiaries.push((author, RewardKind::Author));
-
-		if let Some(params) = self.get_fees_params(block) {
-			let (author_fees, governance_fees) = block.receipts.iter().enumerate()
-    			.filter_map(|(i, receipt)| {
-        			let tx = &block.transactions[i];
-        			tx.gas_price().map(|gas_price| (receipt, gas_price))
-    			})
-    		.fold((U256::zero(), U256::zero()), |(acc_author, acc_governance), (receipt, gas_price)| {
-        		match receipt.get_fees(params.governance_part, gas_price) {
-            		Some((auth, goven)) => (acc_author.saturating_add(auth), acc_governance.saturating_add(goven)),
-            		None => (acc_author, acc_governance),
-        		}
-    		});
-
-			let author_addr = *block.header.author();
-			if let Tracing::Enabled(ref mut traces) = *block.traces_mut() {
-				let mut tracer = ExecutiveTracer::default();
-				if author_fees != U256::zero() {
-					tracer.trace_reward(author_addr, author_fees,  RewardType::Uncle.into());
-				}
-				if governance_fees != U256::zero() {
-					tracer.trace_reward(params.address, governance_fees, RewardType::EmptyStep.into());
-				}
-			 	traces.push(tracer.drain().into());
-			}
-		}
 
 		let block_reward_contract_transition = self
             .block_reward_contract_transitions
