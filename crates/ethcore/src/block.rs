@@ -439,19 +439,27 @@ impl<'x> OpenBlock<'x> {
     /// t_nb 8.5 Turn this into a `LockedBlock`.
     pub fn close_and_lock(self) -> Result<LockedBlock, Error> {
         let mut s = self;
-		// TODO: use fees params to calculate the fees and write them to the trace
 
 		if let Some(params) = s.fees_params {
-			let (author_fees, governance_fees) = s.block.receipts.iter().enumerate()
-    			.filter_map(|(i, receipt)| {
-        			let tx = &s.block.transactions[i];
-        			tx.gas_price().map(|gas_price| (receipt, gas_price))
+			let (author_fees, governance_fees) = s.block.transactions.iter().enumerate()
+    			.filter_map(|(i, tx)| {
+					if i == 0 {
+						// Handling the first transaction in the block
+						let gas_used = s.block.receipts[i].gas_used;
+        				tx.gas_price().map(|gas_price| (gas_used, gas_price))
+					} else {
+						let prev = &s.block.receipts[i-1];
+						let current = &s.block.receipts[i];
+						let gas_used = current.gas_used - prev.gas_used;
+						tx.gas_price().map(|gas_price| (gas_used, gas_price))
+					}
     			})
-    		.fold((U256::zero(), U256::zero()), |(acc_author, acc_governance), (receipt, gas_price)| {
-        		match receipt.get_fees(params.governance_part, gas_price) {
-            		Some((auth, goven)) => (acc_author.saturating_add(auth), acc_governance.saturating_add(goven)),
-            		None => (acc_author, acc_governance),
-        		}
+    		.fold((U256::zero(), U256::zero()), |(acc_author, acc_governance), (gas_used, gas_price)| {
+				//Assume that transaction is checked already
+				let (fees_value, _) = gas_used.overflowing_mul(gas_price);
+				let governance_part = fees_value.saturating_mul(params.governance_part) / U256::from(1_000_000);
+            	let author_part = fees_value.saturating_sub(governance_part);
+				(acc_author.saturating_add(author_part), acc_governance.saturating_add(governance_part))
     		});
 
 			let author_addr = *s.block.header.author();
