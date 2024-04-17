@@ -1820,6 +1820,8 @@ impl Engine<EthereumMachine> for AuthorityRound {
             Ok(ok) => ok,
         };
 
+        trace!(target: "engine", "generate_seal: check is step proposer.");
+
         if is_step_proposer(&*validators, header.parent_hash(), step, header.author()) {
             // this is guarded against by `can_propose` unless the block was signed
             // on the same step (implies same key) and on a different node.
@@ -1853,6 +1855,8 @@ impl Engine<EthereumMachine> for AuthorityRound {
             } else {
                 None
             };
+
+            trace!(target: "engine", "generate_seal: signing...");
 
             if let Ok(signature) = self.sign(header_seal_hash(
                 header,
