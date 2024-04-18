@@ -330,9 +330,9 @@ impl<'x> OpenBlock<'x> {
             })
             .fake_sign(Address::default());
 
-			let mut state = self.block.state.clone();
+			//let mut state = self.block.state.clone();
 			let header = self.block.header.clone();
-			let result = self.engine.proxy_call(&tx, Default::default(), &mut state, &header);
+			let result = self.engine.proxy_call(&tx, Default::default(), self.block.state_mut(), &header);
 			if let Some(bytes) = result {
 				self.gas_price = Some(U256::from_big_endian(bytes.as_slice()));
 			}
@@ -352,9 +352,10 @@ impl<'x> OpenBlock<'x> {
 			})
 			.fake_sign(Address::default());
 
-			let mut state = self.block.state.clone();
+			//let mut state = self.block.state.clone();
 			let header = self.block.header.clone();
-			let result = self.engine.proxy_call(&tx, Default::default(), &mut state, &header);
+			//let result = self.engine.proxy_call(&tx, Default::default(), &mut state, &header);
+			let result = self.engine.proxy_call(&tx, Default::default(), self.block.state_mut(), &header);
 			if let Some(bytes) = result {
 				let tokens = ethabi::decode(&[ethabi::ParamType::Address, ethabi::ParamType::Uint(256)], &bytes).unwrap();
 				if let (Some(Token::Address(address)), Some(Token::Uint(governance_part))) = (tokens.get(0), tokens.get(1)) {

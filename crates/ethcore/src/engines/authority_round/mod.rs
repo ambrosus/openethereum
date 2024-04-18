@@ -2558,7 +2558,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
             .range(..=header.number())
             .last();
 		if let Some((_, address)) = fees_contract_transition {
-			trace!(target: "engine", "Got fees contract transition on block number {}", header.number());
+			// trace!(target: "engine", "Got fees contract transition on block number {}", header.number());
 			return Some(*address);
 		} else {
 			trace!(target: "engine", "No fees contract transition on blcok number {}", header.number());
