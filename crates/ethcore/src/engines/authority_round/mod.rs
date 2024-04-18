@@ -2032,9 +2032,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
 
                             let chain_id = self.machine.params().chain_id;
 
-                            if let Some(signer) = self.signer.read().as_ref() {
-                                let signature =
-                                    signer.sign(t.signature_hash(Some(chain_id))).unwrap();
+                            if let Ok(signature) = self.sign(t.signature_hash(Some(chain_id))).map(Into::into) {
                                 let tx = SignedTransaction::new(
                                     t.with_signature(signature, Some(chain_id)),
                                 )?;
@@ -2047,8 +2045,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
                                     *self.reward_transaction_pushed.lock() = true;
                                 }
 
-                                let our_addr = signer.address();
-                                self.validators.on_close_block(&block.header, &our_addr)?
+                                self.validators.on_close_block(&block.header, &author)?
                             }
                         }
                     }
