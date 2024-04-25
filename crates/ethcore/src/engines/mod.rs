@@ -334,9 +334,18 @@ pub trait Engine<M: Machine>: Sync + Send {
         None
     }
 
+    /// Push reward transaction.
+    fn push_reward_transaction(&self, _block: & mut ExecutedBlock) {
+    }
+
     /// Optional gas reserved.
     fn gas_reserved(&self, _header: &Header) -> Option<U256> {
         None
+    }
+
+    /// Reward mode.
+    fn reward_mode(&self, _header: &Header) -> u64 {
+        0
     }
 
     /// Block transformation functions, before the transactions.
@@ -585,14 +594,6 @@ pub trait Engine<M: Machine>: Sync + Send {
 	fn current_block_reward_address(&self, _header: &Header) -> Option<Address> {
 		None
 	}
-
-    /// Returns true if reward transaction is resently pushed. Needed to fix resealing timeout.
-    fn reward_transaction_pushed(&self) -> bool {
-        false
-    }
-
-    /// Reset reard transaction flag.
-    fn reset_reward_transaction_status(&self) {}
 }
 
 /// t_nb 9.3 Check whether a given block is the best block based on the default total difficulty rule.

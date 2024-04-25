@@ -228,17 +228,8 @@ impl Author {
 struct SealingWork {
     queue: UsingQueue<ClosedBlock>,
     enabled: bool,
-    next_allowed_reseal: Instant,
-    next_mandatory_reseal: Instant,
     // block number when sealing work was last requested
     last_request: Option<u64>,
-}
-
-impl SealingWork {
-    /// Are we allowed to do a non-mandatory reseal?
-    fn reseal_allowed(&self) -> bool {
-        Instant::now() >= self.next_allowed_reseal
-    }
 }
 
 /// Keeps track of transactions using priority queue and holds currently mined block.
@@ -292,8 +283,6 @@ impl Miner {
                 queue: UsingQueue::new(options.work_queue_size),
                 enabled: options.force_sealing
                     || spec.engine.sealing_state() != SealingState::External,
-                next_allowed_reseal: Instant::now(),
-                next_mandatory_reseal: Instant::now() + options.reseal_max_period,
                 last_request: None,
             }),
             params: RwLock::new(AuthoringParams::default()),
@@ -671,6 +660,9 @@ impl Miner {
                 _ => tx_count += 1,
             }
         }
+
+        self.engine.push_reward_transaction(open_block.block_mut());
+
         let elapsed = block_start.elapsed();
         debug!(target: "miner", "Pushed {} transactions in {} ms", tx_count, took_ms(&elapsed));
 
@@ -721,11 +713,6 @@ impl Miner {
             return false;
         }
 
-        if !sealing.reseal_allowed() {
-            trace!(target: "miner", "requires_reseal: reseal too early, next allowed reseal {:?} < {:?}", Instant::now(), sealing.next_allowed_reseal);
-            return false;
-        }
-
         trace!(target: "miner", "requires_reseal: sealing enabled");
 
         // Disable sealing if there were no requests for SEALING_TIMEOUT_IN_BLOCKS
@@ -759,16 +746,7 @@ impl Miner {
             false
         } else {
             // sealing enabled and we don't want to sleep.
-            if self.engine.reward_transaction_pushed() {
-                // should have instant reseal after pushing reward transaction
-                sealing.next_allowed_reseal = Instant::now();
-                self.engine.reset_reward_transaction_status();
-                true
-            } else {
-                // should set delayed reseal in every other case
-                sealing.next_allowed_reseal = Instant::now() + self.options.reseal_min_period;
-                true
-            }
+            true
         }
     }
 
@@ -781,10 +759,8 @@ impl Miner {
         C: BlockChain + SealedBlockImporter,
     {
         {
-            let sealing = self.sealing.lock();
             if block.transactions.is_empty()
                 && !self.forced_sealing()
-                && Instant::now() <= sealing.next_mandatory_reseal
             {
                 return false;
             }
@@ -806,7 +782,6 @@ impl Miner {
                 trace!(target: "miner", "Received a Proposal seal.");
                 {
                     let mut sealing = self.sealing.lock();
-                    sealing.next_mandatory_reseal = Instant::now() + self.options.reseal_max_period;
                     sealing.queue.set_pending(block.clone());
                     sealing.queue.use_last_ref();
                 }
@@ -829,11 +804,6 @@ impl Miner {
             // Directly import a regular sealed block.
             Seal::Regular(seal) => {
                 trace!(target: "miner", "Received a Regular seal.");
-                {
-                    let mut sealing = self.sealing.lock();
-                    sealing.next_mandatory_reseal = Instant::now() + self.options.reseal_max_period;
-                }
-
                 block
                     .lock()
                     .seal(&*self.engine, seal)
@@ -973,22 +943,6 @@ impl Miner {
 
         preparation_status
     }
-
-    /// Prepare pending block, check whether sealing is needed, and then update sealing.
-    fn prepare_and_update_sealing<C: miner::BlockChainClient>(&self, chain: &C) {
-        // Make sure to do it after transaction is imported and lock is dropped.
-        // We need to create pending block and enable sealing.
-        let sealing_state = self.engine.sealing_state();
-
-        if sealing_state == SealingState::Ready
-            || self.prepare_pending_block(chain) == BlockPreparationStatus::NotPrepared
-        {
-            // If new block has not been prepared (means we already had one)
-            // or Engine might be able to seal internally,
-            // we need to update sealing.
-            self.update_sealing(chain, ForceUpdateSealing::No);
-        }
-    }
 }
 
 const SEALING_TIMEOUT_IN_BLOCKS: u64 = 5;
@@ -1107,17 +1061,6 @@ impl miner::MinerService for Miner {
                 .collect(),
         );
 
-        // --------------------------------------------------------------------------
-        // | NOTE Code below requires sealing locks.                                |
-        // | Make sure to release the locks before calling that method.             |
-        // --------------------------------------------------------------------------
-        if !results.is_empty()
-            && self.options.reseal_on_external_tx
-            && self.sealing.lock().reseal_allowed()
-        {
-            self.prepare_and_update_sealing(chain);
-        }
-
         results
     }
 
@@ -1136,15 +1079,6 @@ impl miner::MinerService for Miner {
             .import(client, vec![pool::verifier::Transaction::Local(pending)])
             .pop()
             .expect("one result returned per added transaction; one added => one result; qed");
-
-        // --------------------------------------------------------------------------
-        // | NOTE Code below requires sealing locks.                                |
-        // | Make sure to release the locks before calling that method.             |
-        // --------------------------------------------------------------------------
-        if imported.is_ok() && self.options.reseal_on_own_tx && self.sealing.lock().reseal_allowed()
-        {
-            self.prepare_and_update_sealing(chain);
-        }
 
         imported
     }
@@ -1540,11 +1474,6 @@ impl miner::MinerService for Miner {
         }
 
         if has_new_best_block || (imported.len() > 0 && self.options.reseal_on_uncle) {
-            // t_nb 10.3 Reset `next_allowed_reseal` in case a block is imported.
-            // Even if min_period is high, we will always attempt to create
-            // new pending block.
-            self.sealing.lock().next_allowed_reseal = Instant::now();
-
             if !is_internal_import {
                 // t_nb 10.4 if it is internal import update sealing
                 // --------------------------------------------------------------------------

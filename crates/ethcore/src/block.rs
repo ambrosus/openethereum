@@ -65,8 +65,8 @@ use crate::{executive::FeesParams, trace::{ExecutiveTracer, Tracer, RewardType}}
 pub struct OpenBlock<'x> {
     block: ExecutedBlock,
     engine: &'x dyn EthEngine,
-	gas_price: Option<U256>,
-	fees_params: Option<FeesParams>,
+    gas_price: Option<U256>,
+    fees_params: Option<FeesParams>,
 }
 
 /// Just like `OpenBlock`, except that we've applied `Engine::on_close_block`, finished up the non-seal header fields,
@@ -508,7 +508,6 @@ impl<'x> OpenBlock<'x> {
         Ok(LockedBlock { block: s.block })
     }
 
-   #[cfg(test)]
     /// Return mutable block reference. To be used in tests only.
     pub fn block_mut(&mut self) -> &mut ExecutedBlock {
         &mut self.block

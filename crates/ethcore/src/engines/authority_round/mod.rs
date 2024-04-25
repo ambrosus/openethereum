@@ -84,7 +84,6 @@ use unexpected::{Mismatch, OutOfBounds};
 
 use trace::Tracing;
 use types::{
-    receipt::TypedReceipt,
     transaction::{Action, Error as TransactionError, Transaction, TypedTransaction},
 };
 
@@ -718,8 +717,6 @@ pub struct AuthorityRound {
     /// https://www.xdaichain.com/for-validators/posdao-whitepaper
     posdao_transition: Option<BlockNumber>,
     fees_contract_transitions: BTreeMap<u64, Address>,
-    /// Shows if reward transaction is pushed.
-    reward_transaction_pushed: Mutex<bool>,
 }
 
 // header-chain validator.
@@ -1090,7 +1087,6 @@ impl AuthorityRound {
             gas_limit_override_cache: Mutex::new(LruCache::new(GAS_LIMIT_OVERRIDE_CACHE_CAPACITY)),
             posdao_transition: our_params.posdao_transition,
             fees_contract_transitions: our_params.fees_contract_transitions,
-            reward_transaction_pushed: Mutex::new(false),
         });
 
         // Do not initialize timeouts for tests.
@@ -1498,13 +1494,13 @@ impl IoHandler<()> for TransitionHandler {
     }
 }
 
-fn push_reward_transaction<'a>(
+fn push_reward_transaction(
     machine: &EthereumMachine,
     fees_params: Option<FeesParams>,
-    block: &'a mut ExecutedBlock,
+    block: & mut ExecutedBlock,
     t: SignedTransaction,
     h: Option<H256>,
-) -> Result<&'a TypedReceipt, Error> {
+) -> Result<(), Error> {
     if block.transactions_set.contains(&t.hash()) {
         return Err(TransactionError::AlreadyImported.into());
     }
@@ -1537,7 +1533,7 @@ fn push_reward_transaction<'a>(
     }
     // let mut recept = outcome.receipt.receipt_mut();
     block.receipts.push(outcome.receipt);
-    Ok(block.receipts.last().expect("receipt just pushed; qed"))
+    Ok(())
 }
 
 impl Engine<EthereumMachine> for AuthorityRound {
@@ -1553,6 +1549,77 @@ impl Engine<EthereumMachine> for AuthorityRound {
     /// step messages (which should be empty if no steps are skipped)
     fn seal_fields(&self, header: &Header) -> usize {
         header_expected_seal_fields(header, self.empty_steps_transition)
+    }
+
+    fn push_reward_transaction(&self, block: & mut ExecutedBlock) {
+        let author = *block.header.author();
+
+        let block_reward_contract_transition = self
+            .block_reward_contract_transitions
+            .range(..=block.header.number())
+            .last();
+
+        let block_reward_mode_transition = self
+            .block_reward_mode_transitions
+            .range(..=block.header.number())
+            .last();
+
+        let reward_mode = if let Some((_, mode)) = block_reward_mode_transition {
+            *mode
+        } else {
+            0
+        };
+
+        if reward_mode > 0 {
+            if let Some((_, contract)) = block_reward_contract_transition {
+                if let Some(address) = contract.address() {
+                    if !block.transactions.iter().any(|tx| {
+                        let utx = tx.unsigned.tx();
+                        utx.action == Action::Call(address)
+                            && utx.data.len() == 4
+                            && utx.data[0] == 0xc3
+                            && utx.data[1] == 0x3f
+                            && utx.data[2] == 0xb8
+                            && utx.data[3] == 0x77
+                            && public_to_address(&tx.recover_public().unwrap()) == author
+                    }) {
+                        if self.sealing_state() == SealingState::Ready {
+                            info!(target: "engine", "push_reward_transaction.");
+
+                            let block_gas_reserved_transition = self
+                                .block_gas_reserved_transitions
+                                .range(..=block.header.number())
+                                .last();
+
+                            let gas = if let Some((_, gas)) = block_gas_reserved_transition {
+                                *gas
+                            } else {
+                                1_000_000
+                            };
+
+                            let t = TypedTransaction::Legacy(Transaction {
+                                nonce: block.state.nonce(&author).unwrap(),
+                                gas_price: U256::zero(),
+                                gas: U256::from(gas),
+                                action: Action::Call(address),
+                                value: U256::zero(),
+                                data: vec![0xc3, 0x3f, 0xb8, 0x77],
+                            });
+
+                            let chain_id = self.machine.params().chain_id;
+
+                            if let Ok(signature) = self.sign(t.signature_hash(Some(chain_id))).map(Into::into) {
+                                if let Ok(tx) = SignedTransaction::new(t.with_signature(signature, Some(chain_id))) {
+                                    if let Err(e) = push_reward_transaction(&self.machine, None, block, tx, None) {
+                                        info!(target: "engine", "push_reward_transaction: {:?}", e);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     fn gas_reserved(&self, header: &Header) -> Option<U256> {
@@ -1580,6 +1647,19 @@ impl Engine<EthereumMachine> for AuthorityRound {
             Some(U256::from(*gas))
         } else {
             None
+        }
+    }
+
+    fn reward_mode(&self, header: &Header) -> u64 {
+        let block_reward_mode_transition = self
+            .block_reward_mode_transitions
+            .range(..=header.number())
+            .last();
+
+        if let Some((_, mode)) = block_reward_mode_transition {
+            *mode
+        } else {
+            0
         }
     }
 
@@ -1978,7 +2058,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
         let number = block.header.number();
         beneficiaries.push((author, RewardKind::Author));
 
-		let block_reward_contract_transition = self
+        let block_reward_contract_transition = self
             .block_reward_contract_transitions
             .range(..=block.header.number())
             .last();
@@ -1994,64 +2074,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
             0
         };
 
-        if reward_mode > 0 {
-            if let Some((_, contract)) = block_reward_contract_transition {
-                if let Some(address) = contract.address() {
-                    if !block.transactions.iter().any(|tx| {
-                        let utx = tx.unsigned.tx();
-                        utx.action == Action::Call(address)
-                            && utx.data.len() == 4
-                            && utx.data[0] == 0xc3
-                            && utx.data[1] == 0x3f
-                            && utx.data[2] == 0xb8
-                            && utx.data[3] == 0x77
-                            && public_to_address(&tx.recover_public().unwrap()) == author
-                    }) {
-                        if self.sealing_state() == SealingState::Ready {
-                            info!(target: "engine", "push_reward_transaction.");
-
-                            let block_gas_reserved_transition = self
-                                .block_gas_reserved_transitions
-                                .range(..=block.header.number())
-                                .last();
-
-                            let gas = if let Some((_, gas)) = block_gas_reserved_transition {
-                                *gas
-                            } else {
-                                1_000_000
-                            };
-
-                            let t = TypedTransaction::Legacy(Transaction {
-                                nonce: block.state.nonce(&author).unwrap(),
-                                gas_price: U256::zero(),
-                                gas: U256::from(gas),
-                                action: Action::Call(address),
-                                value: U256::zero(),
-                                data: vec![0xc3, 0x3f, 0xb8, 0x77],
-                            });
-
-                            let chain_id = self.machine.params().chain_id;
-
-                            if let Ok(signature) = self.sign(t.signature_hash(Some(chain_id))).map(Into::into) {
-                                let tx = SignedTransaction::new(
-                                    t.with_signature(signature, Some(chain_id)),
-                                )?;
-
-                                if let Err(e) =
-                                    push_reward_transaction(&self.machine, None, block, tx, None)
-                                {
-                                    info!(target: "engine", "push_reward_transaction: {:?}", e);
-                                } else {
-                                    *self.reward_transaction_pushed.lock() = true;
-                                }
-
-                                self.validators.on_close_block(&block.header, &author)?
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
+        if reward_mode == 0 {
             let rewards: Vec<_> = if let Some((_, contract)) = block_reward_contract_transition {
                 let mut call = crate::engines::default_system_or_code_call(&self.machine, block);
                 let rewards = contract.reward(&beneficiaries, &mut call)?;
@@ -2584,16 +2607,6 @@ impl Engine<EthereumMachine> for AuthorityRound {
         }
 		return None;
 	}
-
-    /// Returns true if reward transaction is resently pushed. Needed to fix resealing timeout.
-    fn reward_transaction_pushed(&self) -> bool {
-        *self.reward_transaction_pushed.lock()
-    }
-
-    /// Reset reard transaction flag.
-    fn reset_reward_transaction_status(&self) {
-        *self.reward_transaction_pushed.lock() = false
-    }
 }
 
 /// A helper accumulator function mapping a step duration and a step duration transition timestamp
