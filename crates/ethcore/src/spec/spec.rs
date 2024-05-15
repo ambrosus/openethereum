@@ -1197,6 +1197,13 @@ impl Spec {
         load_bundled!("test/authority_round_block_reward_contract")
     }
 
+    /// Create a new Spec with AuthorityRound consensus (with empty steps) using a block reward
+    /// transaction.
+    #[cfg(any(test, feature = "test-helpers"))]
+    pub fn new_test_round_block_reward_transaction() -> Self {
+        load_bundled!("test/authority_round_block_reward_transaction")
+    }
+
     /// TestList.sol used in both specs: https://github.com/paritytech/contracts/pull/30/files (link not valid)
     /// Accounts with secrets keccak("0") and keccak("1") are initially the validators.
     /// Create a new Spec with BasicAuthority which uses a contract at address 5 to determine

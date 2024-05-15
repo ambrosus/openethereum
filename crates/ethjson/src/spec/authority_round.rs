@@ -243,4 +243,85 @@ mod tests {
             Some(BlockReward::Multi(rewards))
         );
     }
+
+    #[test]
+    fn authority_round_deserialization_reward_modes() {
+        let s = r#"{
+			"params": {
+				"stepDuration": "0x02",
+				"validators": {
+					"contract" : "0xc6d9d2cd449a754c494264e1809c50e34d64562b"
+				},
+				"blockRewardContractTransitions": {
+					"10": "0x0000000000000000000000000000000000000042",
+					"20": "0x0000000000000000000000000000000000000084"
+				},
+				"blockRewardModeTransitions": {
+					"10": 0,
+					"20": 1
+				},
+				"blockGasReservedTransitions": {
+					"10": 0,
+					"20": 1000000
+				}
+			}
+		}"#;
+
+        let deserialized: AuthorityRound = serde_json::from_str(s).unwrap();
+        assert_eq!(
+            deserialized.params.step_duration,
+            StepDuration::Single(Uint(U256::from(0x02)))
+        );
+        assert_eq!(
+            deserialized.params.validators,
+            ValidatorSet::Contract(Address(
+                H160::from_str("c6d9d2cd449a754c494264e1809c50e34d64562b").unwrap()
+            ))
+        );
+        assert_eq!(
+            deserialized.params.block_reward_contract_transitions.unwrap(),
+            vec![
+                (
+                    Uint(10.into()),
+                    Address(H160::from_str("0000000000000000000000000000000000000042").unwrap())
+                ),
+                (
+                    Uint(20.into()),
+                    Address(H160::from_str("0000000000000000000000000000000000000084").unwrap())
+                ),
+            ]
+            .into_iter()
+            .collect()
+        );
+        assert_eq!(
+            deserialized.params.block_reward_mode_transitions.unwrap(),
+            vec![
+                (
+                    Uint(10.into()),
+                    Uint(U256::from(0))
+                ),
+                (
+                    Uint(20.into()),
+                    Uint(U256::from(1))
+                ),
+            ]
+            .into_iter()
+            .collect()
+        );
+        assert_eq!(
+            deserialized.params.block_gas_reserved_transitions.unwrap(),
+            vec![
+                (
+                    10,
+                    0
+                ),
+                (
+                    20,
+                    1000000
+                ),
+            ]
+            .into_iter()
+            .collect()
+        );
+    }
 }

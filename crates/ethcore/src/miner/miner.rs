@@ -1751,8 +1751,8 @@ mod tests {
         miner.chain_new_blocks(&*client, &imported, empty, &imported, empty, false);
 
         // then
-        // This should be false, because it's too early.
-        assert_eq!(miner.requires_reseal(2), false);
+        // This should be true, because fast reseal is enabled.
+        assert_eq!(miner.requires_reseal(2), true);
         // but still work package should be ready
         let res = miner.work_package(&*client);
         assert_eq!(res.unwrap().1, 3);

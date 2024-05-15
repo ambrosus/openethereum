@@ -2581,6 +2581,8 @@ mod tests {
             randomness_contract_address: BTreeMap::new(),
             block_gas_limit_contract_transitions: BTreeMap::new(),
             posdao_transition: Some(0),
+            block_gas_reserved_transitions: Default::default(),
+            block_reward_mode_transitions: Default::default(),
         };
 
         // mutate aura params
@@ -3579,6 +3581,147 @@ mod tests {
         )
     }
 
+    #[test]
+    fn block_reward_transaction() {
+        let spec = Spec::new_test_round_block_reward_transaction();
+        let tap = Arc::new(AccountProvider::transient_provider());
+
+        let addr1 = tap.insert_account(keccak("1").into(), &"1".into()).unwrap();
+
+        let engine = &*spec.engine;
+        let genesis_header = spec.genesis_header();
+        let db1 = spec
+            .ensure_db_good(get_temp_state_db(), &Default::default())
+            .unwrap();
+
+        let last_hashes = Arc::new(vec![genesis_header.hash()]);
+
+        let client = generate_dummy_client_with_spec(Spec::new_test_round_block_reward_transaction);
+        engine.register_client(Arc::downgrade(&client) as _);
+        engine.set_signer(Some(Box::new((tap.clone(), addr1, "1".into()))));
+
+        // step 1
+
+        let b1 = OpenBlock::new(
+            engine,
+            Default::default(),
+            false,
+            db1,
+            &genesis_header,
+            last_hashes.clone(),
+            addr1,
+            (3141562.into(), 31415620.into()),
+            vec![],
+            false,
+            None,
+        )
+        .unwrap();
+        let addr1_balance = b1.state.balance(&addr1).unwrap();
+        let b1 = b1.close().unwrap();
+
+        // the contract rewards 10000 for block author
+        assert_eq!(
+            b1.state.balance(&addr1).unwrap(),
+            addr1_balance + 10000,
+        )
+    }
+
+    #[test]
+    fn block_reward_transaction_gas_reservation() {
+        let spec = Spec::new_test_round_block_reward_transaction();
+        let tap = Arc::new(AccountProvider::transient_provider());
+
+        let addr1 = tap.insert_account(keccak("1").into(), &"1".into()).unwrap();
+        let addr2 = tap.insert_account(keccak("2").into(), &"2".into()).unwrap();
+
+        let engine = &*spec.engine;
+        let genesis_header = spec.genesis_header();
+        let db1 = spec
+            .ensure_db_good(get_temp_state_db(), &Default::default())
+            .unwrap();
+
+        let last_hashes = Arc::new(vec![genesis_header.hash()]);
+
+        let client = generate_dummy_client_with_spec(Spec::new_test_round_block_reward_transaction);
+        engine.register_client(Arc::downgrade(&client) as _);
+        engine.set_signer(Some(Box::new((tap.clone(), addr1, "1".into()))));
+
+        // step 1
+
+        let mut b1 = OpenBlock::new(
+            engine,
+            Default::default(),
+            false,
+            db1,
+            &genesis_header,
+            last_hashes.clone(),
+            addr1,
+            (1050000.into(), 1050000.into()),
+            vec![],
+            false,
+            None,
+        )
+        .unwrap();
+        let addr1_balance = b1.state.balance(&addr1).unwrap();
+
+        // Gas limit from the genesis block is 1050000
+        // reserved for the reward transaction - 1000000
+        // transfer: 1050000 - 21000 = 1029000 - OK
+        let tx = TypedTransaction::Legacy(Transaction {
+                action: Action::Call(addr2),
+                nonce: 0.into(),
+                gas_price: U256::zero(),
+                gas: 21000.into(),
+                value: U256::zero(),
+                data: vec![],
+            })
+            .fake_sign(addr1);
+
+        assert_eq!(
+            b1.push_transaction(tx, None, true).is_ok(),
+            true,
+        );
+
+        // transfer: 1029000 - 21000 = 1008000 - OK
+        let tx = TypedTransaction::Legacy(Transaction {
+                action: Action::Call(addr2),
+                nonce: 1.into(),
+                gas_price: U256::zero(),
+                gas: 21000.into(),
+                value: U256::zero(),
+                data: vec![],
+            })
+            .fake_sign(addr1);
+
+        assert_eq!(
+            b1.push_transaction(tx, None, true).is_ok(),
+            true,
+        );
+
+        // transfer: 1008000 - 21000 = 987000 - FAIL
+        let tx = TypedTransaction::Legacy(Transaction {
+                action: Action::Call(addr2),
+                nonce: 2.into(),
+                gas_price: U256::zero(),
+                gas: 21000.into(),
+                value: U256::zero(),
+                data: vec![],
+            })
+            .fake_sign(addr1);
+
+        assert_eq!(
+            b1.push_transaction(tx, None, true).is_ok(),
+            false,
+        );
+
+        let b1 = b1.close().unwrap();
+
+        // the contract rewards 10000 for block author
+        assert_eq!(
+            b1.state.balance(&addr1).unwrap(),
+            addr1_balance + 10000,
+        )
+    }
     #[test]
     fn randomness_contract() -> Result<(), super::util::CallError> {
         use_contract!(
