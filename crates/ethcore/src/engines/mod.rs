@@ -26,7 +26,7 @@ mod validator_set;
 pub mod block_reward;
 pub mod signer;
 
-use crate::state_db::StateDB;
+use crate::executive::FeesParams;
 
 pub use self::{
     authority_round::AuthorityRound,
@@ -49,14 +49,11 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use state::State;
-
 use builtin::Builtin;
 use error::Error;
 use snapshot::SnapshotComponents;
 use spec::CommonParams;
 use types::{
-	call_analytics::CallAnalytics,
     header::{ExtendedHeader, Header},
     transaction::{self, SignedTransaction, UnverifiedTransaction},
     BlockNumber,
@@ -575,25 +572,25 @@ pub trait Engine<M: Machine>: Sync + Send {
         None
     }
 
-	/// Returns the fees contract address for given block
-	fn current_fees_address(&self, _header: &Header) -> Option<Address> {
-		None
-	}
+    /// Retruns the gas price from the latest known block
+    fn get_gas_price(&self, _header: &Header) -> Option<U256> {
+        None
+    }
 
-	/// Retruns the gas price from the latest known block
-	fn latest_gas_price(&self) -> Option<U256> {
-		None
-	}
+    /// Retruns the gas price from the latest known block
+    fn get_fee_params(&self, _header: &Header) -> Option<FeesParams> {
+        None
+    }
 
-	/// Proxys the call to the EngineClient::call
-	fn proxy_call(&self, _transaction: &SignedTransaction, _analytics: CallAnalytics, _state: &mut State<StateDB>, _header: &Header) -> Option<Bytes> {
-		None
-	}
+    /// Return the address of the fees contract for given block
+    fn current_fees_address(&self, _header: &Header) -> Option<Address> {
+        None
+    }
 
-	/// Return the address of the block reward contract for given block
-	fn current_block_reward_address(&self, _header: &Header) -> Option<Address> {
-		None
-	}
+    /// Return the address of the block reward contract for given block
+    fn current_block_reward_address(&self, _header: &Header) -> Option<Address> {
+        None
+    }
 }
 
 /// t_nb 9.3 Check whether a given block is the best block based on the default total difficulty rule.

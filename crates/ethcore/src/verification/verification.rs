@@ -126,8 +126,8 @@ pub fn verify_block_unordered(
         None
     };
 
-	let latest_gas_price = engine.latest_gas_price();
-	let current_block_reward_address = engine.current_block_reward_address(&header);
+    let latest_gas_price = engine.get_gas_price(&header);
+    let current_block_reward_address = engine.current_block_reward_address(&header);
 
     // t_nb 5.3 iterate over all transactions
     let transactions = block

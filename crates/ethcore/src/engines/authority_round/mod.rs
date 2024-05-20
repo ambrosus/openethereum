@@ -39,8 +39,6 @@ use std::{
 };
 
 use crate::executive::FeesParams;
-use crate::state_db::StateDB;
-use state::State;
 
 use self::finality::RollingFinality;
 use super::{
@@ -72,7 +70,6 @@ use rand::rngs::OsRng;
 use rlp::{encode, Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use time_utils::CheckedSystemTime;
 use types::{
-	call_analytics::CallAnalytics,
     ancestry_action::AncestryAction,
     header::{ExtendedHeader, Header},
     ids::BlockId,
@@ -90,6 +87,8 @@ use types::{
 //mod block_gas_limit as crate_block_gas_limit;
 mod finality;
 mod randomness;
+mod block_gas_price;
+mod block_tx_fee;
 pub(crate) mod util;
 
 /// `AuthorityRound` params.
@@ -2538,75 +2537,58 @@ impl Engine<EthereumMachine> for AuthorityRound {
         limit
     }
 
-	fn proxy_call(&self, transaction: &SignedTransaction, analytics: CallAnalytics, state: &mut State<StateDB>, header: &Header) -> Option<Bytes> {
-		let client = self
-			.upgrade_client_or("Failed to upgrade to client")
-			.expect("Failed to get the client");
-		client.proxy_call(
-			transaction,
-			analytics,
-			state,
-			header)
-	}
+    fn get_gas_price(&self, header: &Header) -> Option<U256> {
+        let cl = self.upgrade_client_or("Failed to get the client").expect("Failed to get the client");
+        let client = cl.as_full_client().unwrap();
+        if let Some(address) = self.current_fees_address(header) {
+            block_gas_price::block_gas_price(client, header, address)
+        } else {
+            None
+        }
+    }
 
-	fn latest_gas_price(&self) -> Option<U256> {
-		let cl = self.upgrade_client_or("Failed to get the client").expect("Failed to get the client");
-		let client = cl.as_full_client().unwrap();
-		let (mut state, header) = client.latest_state_and_header_external();
-		if let Some(address) = self.current_fees_address(&header) {
-			let tx = TypedTransaction::Legacy(types::transaction::Transaction {
-				nonce: client.nonce(&Address::default(), BlockId::Latest).unwrap(),
-				action: Action::Call(address),
-				gas: U256::from(50_000_000),
-				gas_price: U256::zero(),
-				value: U256::default(),
-				data: vec![0x45, 0x52, 0x59, 0xcb],
-			})
-			.fake_sign(Address::default());
+    fn get_fee_params(&self, header: &Header) -> Option<FeesParams> {
+        let cl = self.upgrade_client_or("Failed to get the client").expect("Failed to get the client");
+        let client = cl.as_full_client().unwrap();
+        if let Some(address) = self.current_fees_address(header) {
+            block_tx_fee::block_tx_fee(client, header, address)
+        } else {
+            None
+        }
+    }
 
-			let result = self.proxy_call(&tx, Default::default(),&mut state, &header);
-			if let Some(bytes) = result {
-				Some(U256::from_big_endian(bytes.as_slice()))
-			} else {
-				None
-			}
-		} else {
-			None
-		}
-	}
-
-	fn current_fees_address(&self, header: &Header) -> Option<Address> {
-		let fees_contract_transition = self
+    fn current_fees_address(&self, header: &Header) -> Option<Address> {
+        let fees_contract_transition = self
             .fees_contract_transitions
             .range(..=header.number())
             .last();
-		if let Some((_, address)) = fees_contract_transition {
-			// trace!(target: "engine", "Got fees contract transition on block number {}", header.number());
-			return Some(*address);
-		} else {
-			trace!(target: "engine", "No fees contract transition on blcok number {}", header.number());
-			return None;
-		}
-	}
+        if let Some((_, address)) = fees_contract_transition {
+            // trace!(target: "engine", "Got fees contract transition on block number {}", header.number());
+            return Some(*address);
+        } else {
+            trace!(target: "engine", "No fees contract transition on blcok number {}", header.number());
+            return None;
+        }
+    }
 
-	fn current_block_reward_address(&self, header: &Header) -> Option<Address> {
-		let block_reward_mode_transition = self
+    fn current_block_reward_address(&self, header: &Header) -> Option<Address> {
+        let block_reward_mode_transition = self
             .block_reward_mode_transitions
             .range(..=header.number())
             .last();
 
-		let block_reward_contract_transition = self
+        let block_reward_contract_transition = self
             .block_reward_contract_transitions
             .range(..=header.number())
             .last();
 
-		if let Some((_, _)) = block_reward_mode_transition {
-			if let Some((_, contract)) = block_reward_contract_transition {
-				return contract.address();
-			}
+        if let Some((_, _)) = block_reward_mode_transition {
+            if let Some((_, contract)) = block_reward_contract_transition {
+                return contract.address();
+            }
         }
-		return None;
-	}
+        return None;
+    }
 }
 
 /// A helper accumulator function mapping a step duration and a step duration transition timestamp

@@ -35,7 +35,6 @@ use std::{cmp, collections::HashSet, ops, sync::Arc};
 
 use bytes::Bytes;
 use ethereum_types::{Address, Bloom, H256, U256};
-use ethabi::Token;
 
 use engines::EthEngine;
 use error::{BlockError, Error};
@@ -53,7 +52,7 @@ use rlp::{encode_list, RlpStream};
 use types::{
     header::{ExtendedHeader, Header},
     receipt::{TransactionOutcome, TypedReceipt},
-    transaction::{Error as TransactionError, SignedTransaction, TypedTransaction, Action},
+    transaction::{Error as TransactionError, SignedTransaction},
 };
 
 use crate::{executive::FeesParams, trace::{ExecutiveTracer, Tracer, RewardType}};
@@ -312,63 +311,24 @@ impl<'x> OpenBlock<'x> {
             .expect("receipt just pushed; qed"))
     }
 
-	/// Returns gas price getted from from contract during block creation
-	pub fn get_current_gas_price(&self) -> Option<U256> {
-		self.gas_price
-	}
+    /// Returns gas price getted from from contract during block creation
+    pub fn get_current_gas_price(&self) -> Option<U256> {
+        self.gas_price
+    }
 
-	/// Gets the current gas price from the fees contract.
-	fn update_gas_price(&mut self) {
-		if let Some(address) = self.engine.current_fees_address(&self.block.header) {
-			let tx = TypedTransaction::Legacy(types::transaction::Transaction {
-                nonce: self.block.state.nonce(&Address::default()).unwrap(),
-                action: Action::Call(address),
-                gas: U256::from(50_000_000),
-                gas_price: U256::default(),
-                value: U256::default(),
-                data: vec![0x45, 0x52, 0x59, 0xcb],
-            })
-            .fake_sign(Address::default());
+    /// Gets the current gas price from the fees contract.
+    fn update_gas_price(&mut self) {
+        if let Some(price) = self.engine.get_gas_price(&self.block.header) {
+            self.gas_price = Some(price);
+        }
+    }
 
-			//let mut state = self.block.state.clone();
-			let header = self.block.header.clone();
-			let result = self.engine.proxy_call(&tx, Default::default(), self.block.state_mut(), &header);
-			if let Some(bytes) = result {
-				self.gas_price = Some(U256::from_big_endian(bytes.as_slice()));
-			}
-		}
-	}
-
-	/// Get the current fees params from the fees contract.
-	fn update_fees_params(&mut self) {
-		if let Some(address) = self.engine.current_fees_address(&self.block.header) {
-			let tx = TypedTransaction::Legacy(types::transaction::Transaction {
-				nonce: self.block.state.nonce(&Address::default()).unwrap(),
-				action: Action::Call(address),
-				gas: U256::from(50_000_000),
-				gas_price: U256::default(),
-				value: U256::default(),
-				data: vec![0xfd, 0x91, 0x97, 0x5a],
-			})
-			.fake_sign(Address::default());
-
-			//let mut state = self.block.state.clone();
-			let header = self.block.header.clone();
-			//let result = self.engine.proxy_call(&tx, Default::default(), &mut state, &header);
-			let result = self.engine.proxy_call(&tx, Default::default(), self.block.state_mut(), &header);
-			if let Some(bytes) = result {
-				let tokens = ethabi::decode(&[ethabi::ParamType::Address, ethabi::ParamType::Uint(256)], &bytes).unwrap();
-				if let (Some(Token::Address(address)), Some(Token::Uint(governance_part))) = (tokens.get(0), tokens.get(1)) {
-        			let params = FeesParams {
-        	    		address: *address,
-           		 		governance_part: *governance_part,
-        			};
-					self.fees_params = Some(params);
-    			}
-			}
-
-		}
-	}
+    /// Get the current fees params from the fees contract.
+    fn update_fees_params(&mut self) {
+        if let Some(params) = self.engine.get_fee_params(&self.block.header) {
+            self.fees_params = Some(params);
+        }
+    }
 
     /// Push transactions onto the block.
     #[cfg(not(feature = "slow-blocks"))]
