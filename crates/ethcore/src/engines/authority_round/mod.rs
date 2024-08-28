@@ -2538,9 +2538,9 @@ impl Engine<EthereumMachine> for AuthorityRound {
     }
 
     fn get_gas_price(&self, header: &Header) -> Option<U256> {
-        let cl = self.upgrade_client_or("Failed to get the client").expect("Failed to get the client");
-        let client = cl.as_full_client().unwrap();
         if let Some(address) = self.current_fees_address(header) {
+            let cl = self.upgrade_client_or("Failed to get the client").expect("Failed to get the client");
+            let client = cl.as_full_client().unwrap();
             block_gas_price::block_gas_price(client, header, address)
         } else {
             None
@@ -2548,9 +2548,9 @@ impl Engine<EthereumMachine> for AuthorityRound {
     }
 
     fn get_fee_params(&self, header: &Header) -> Option<FeesParams> {
-        let cl = self.upgrade_client_or("Failed to get the client").expect("Failed to get the client");
-        let client = cl.as_full_client().unwrap();
         if let Some(address) = self.current_fees_address(header) {
+            let cl = self.upgrade_client_or("Failed to get the client").expect("Failed to get the client");
+            let client = cl.as_full_client().unwrap();
             block_tx_fee::block_tx_fee(client, header, address)
         } else {
             None
@@ -2566,7 +2566,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
             // trace!(target: "engine", "Got fees contract transition on block number {}", header.number());
             return Some(*address);
         } else {
-            trace!(target: "engine", "No fees contract transition on blcok number {}", header.number());
+            // trace!(target: "engine", "No fees contract transition on blcok number {}", header.number());
             return None;
         }
     }
