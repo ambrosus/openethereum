@@ -125,3 +125,5 @@ Follow these steps to compile and install AirDAO (ex Ambrosus) OpenEthereum:
     ```shell
     ./target/x86_64-unknown-linux-gnu/release/openethereum --config /root/openethereum/app/parity_config.toml
     ```
+
+	 **_Very Important:_** The only stable and up-to-date version is the one used in the documentation, which is currently openethereum:v3.3.3-amb1.2.2.6.
