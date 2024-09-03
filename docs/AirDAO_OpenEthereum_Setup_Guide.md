@@ -97,6 +97,8 @@ Follow these steps to set up AirDAO (ex Ambrosus) OpenEthereum:
     docker run --name "amb-node" -d -v /root/server/data/:/app -p 8545:8545 ghcr.io/ambrosus/openethereum:v3.3.3-amb1.2.2.6 --config /app/parity_config.toml
     ```
 
+	 **_Very Important:_** The only stable and up-to-date version is the one used in the documentation, which is currently openethereum:v3.3.3-amb1.2.2.6.
+
 10. Check if the Docker container is running:
 
     ```shell
