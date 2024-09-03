@@ -320,12 +320,7 @@ mod tests {
         let mut header = Header::new();
         header.set_number(499);
         let sync_client = generate_dummy_client_with_spec(Spec::new_validator_multi);
-        match multi.signals_epoch_end(
-            false,
-            &header,
-            Default::default(),
-            sync_client.engine().machine(),
-        ) {
+        match multi.signals_epoch_end(false, &header, Default::default(), sync_client.engine().machine()) {
             EpochChange::No => {}
             _ => panic!("Expected no epoch signal change."),
         }
@@ -333,12 +328,7 @@ mod tests {
 
         header.set_number(500);
 
-        match multi.signals_epoch_end(
-            false,
-            &header,
-            Default::default(),
-            sync_client.engine().machine(),
-        ) {
+        match multi.signals_epoch_end(false, &header, Default::default(), sync_client.engine().machine()) {
             EpochChange::No => {}
             _ => panic!("Expected no epoch signal change."),
         }

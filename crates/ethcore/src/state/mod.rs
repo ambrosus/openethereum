@@ -59,8 +59,6 @@ mod substate;
 
 pub mod backend;
 
-use crate::executive::FeesParams;
-
 pub use self::{account::Account, backend::Backend, substate::Substate};
 
 /// Used to return information about an `State::apply` operation.
@@ -220,7 +218,7 @@ pub fn check_proof(
     };
 
     let options = TransactOptions::with_no_tracing().save_output_from_contract();
-    match state.execute(env_info, machine, None, transaction, options, true) {
+    match state.execute(env_info, machine, transaction, options, true) {
         Ok(executed) => ProvedExecution::Complete(Box::new(executed)),
         Err(ExecutionError::Internal(_)) => ProvedExecution::BadProof,
         Err(e) => ProvedExecution::Failed(e),
@@ -253,7 +251,7 @@ pub fn prove_transaction_virtual<H: AsHashDB<KeccakHasher, DBValue> + Send + Syn
     let options = TransactOptions::with_no_tracing()
         .dont_check_nonce()
         .save_output_from_contract();
-    match state.execute(env_info, machine, None, transaction, options, true) {
+    match state.execute(env_info, machine, transaction, options, true) {
         Err(ExecutionError::Internal(_)) => None,
         Err(e) => {
             trace!(target: "state", "Proved call failed: {}", e);
@@ -910,30 +908,15 @@ impl<B: Backend> State<B> {
         &mut self,
         env_info: &EnvInfo,
         machine: &Machine,
-        fees_params: Option<FeesParams>,
         t: &SignedTransaction,
         tracing: bool,
     ) -> ApplyResult<FlatTrace, VMTrace> {
         if tracing {
             let options = TransactOptions::with_tracing();
-            self.apply_with_tracing(
-                env_info,
-                machine,
-                fees_params,
-                t,
-                options.tracer,
-                options.vm_tracer,
-            )
+            self.apply_with_tracing(env_info, machine, t, options.tracer, options.vm_tracer)
         } else {
             let options = TransactOptions::with_no_tracing();
-            self.apply_with_tracing(
-                env_info,
-                machine,
-                fees_params,
-                t,
-                options.tracer,
-                options.vm_tracer,
-            )
+            self.apply_with_tracing(env_info, machine, t, options.tracer, options.vm_tracer)
         }
     }
 
@@ -943,7 +926,6 @@ impl<B: Backend> State<B> {
         &mut self,
         env_info: &EnvInfo,
         machine: &Machine,
-        fees_params: Option<FeesParams>,
         t: &SignedTransaction,
         tracer: T,
         vm_tracer: V,
@@ -953,7 +935,7 @@ impl<B: Backend> State<B> {
         V: trace::VMTracer,
     {
         let options = TransactOptions::new(tracer, vm_tracer);
-        let e = self.execute(env_info, machine, fees_params, t, options, false)?;
+        let e = self.execute(env_info, machine, t, options, false)?;
         let params = machine.params();
 
         let eip658 = env_info.number >= params.eip658_transition;
@@ -990,12 +972,11 @@ impl<B: Backend> State<B> {
     // Execute a given transaction without committing changes.
     //
     // `virt` signals that we are executing outside of a block set and restrictions like
-    // gas limits and gas costs should be lifted. Also, the fees_params could be omitted.
+    // gas limits and gas costs should be lifted.
     fn execute<T, V>(
         &mut self,
         env_info: &EnvInfo,
         machine: &Machine,
-        fees_params: Option<FeesParams>,
         t: &SignedTransaction,
         options: TransactOptions<T, V>,
         virt: bool,
@@ -1009,7 +990,7 @@ impl<B: Backend> State<B> {
 
         match virt {
             true => e.transact_virtual(t, options),
-            false => e.transact(t, options, fees_params),
+            false => e.transact(t, options),
         }
     }
 

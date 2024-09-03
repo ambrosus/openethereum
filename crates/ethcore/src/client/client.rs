@@ -107,7 +107,6 @@ use db::{keys::BlockDetails, Readable, Writable};
 pub use reth_util::queue::ExecutionQueue;
 pub use types::{block_status::BlockStatus, blockchain_info::BlockChainInfo};
 pub use verification::QueueInfo as BlockQueueInfo;
-
 use_contract!(registry, "res/contracts/registrar.json");
 
 const ANCIENT_BLOCKS_QUEUE_SIZE: usize = 4096;
@@ -803,10 +802,7 @@ impl Importer {
             receipts: Some(&receipts),
         };
 
-        match self
-            .engine
-            .signals_epoch_end(header, auxiliary, self.engine.machine())
-        {
+        match self.engine.signals_epoch_end(header, auxiliary, self.engine.machine()) {
             EpochChange::Yes(proof) => {
                 use engines::Proof;
                 let proof = match proof {
@@ -845,7 +841,7 @@ impl Importer {
                             let machine = self.engine.machine();
                             let schedule = machine.schedule(env_info.number);
                             let res = Executive::new(&mut state, &env_info, &machine, &schedule)
-                                .transact(&transaction, options, None);
+                                .transact(&transaction, options);
 
                             let res = match res {
                                 Err(e) => {
@@ -2090,7 +2086,6 @@ impl Call for Client {
             let mut clone = state.clone();
             let machine = self.engine.machine();
             let schedule = machine.schedule(env_info.number);
-            // fees_params is None because they have no influence on gas
             Executive::new(&mut clone, &env_info, &machine, &schedule)
                 .transact_virtual(&tx, options())
         };
@@ -2830,10 +2825,6 @@ impl BlockChainClient for Client {
     fn state_data(&self, hash: &H256) -> Option<Bytes> {
         self.state_db.read().journal_db().state(hash)
     }
-
-	fn latest_state_and_header_external(&self) -> (State<StateDB>, Header) {
-	    self.latest_state_and_header()
-	}
 }
 
 impl IoClient for Client {
@@ -3163,13 +3154,6 @@ impl super::traits::EngineClient for Client {
     fn block_header(&self, id: BlockId) -> Option<encoded::Header> {
         <dyn BlockChainClient>::block_header(self, id)
     }
-
-	fn proxy_call(&self, transaction: &SignedTransaction, analytics: CallAnalytics, state: &mut State<StateDB>, header: &Header) -> Option<Bytes> {
-		match self.call(transaction, analytics, state, header) {
-			Ok(executed) => Some(executed.output),
-			Err(_) => None,
-		}
-	}
 }
 
 impl ProvingBlockChainClient for Client {

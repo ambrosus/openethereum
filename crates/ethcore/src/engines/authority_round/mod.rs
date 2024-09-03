@@ -21,7 +21,7 @@
 //! set this option to `0`, to use a 2/3 quorum from the beginning.
 //!
 //! To support on-chain governance, the [ValidatorSet] is pluggable: Aura supports simple
-//! c well as smart contract-based dynamic validator sets.
+//! constant lists of validators as well as smart contract-based dynamic validator sets.
 //! Misbehavior is reported to the [ValidatorSet] as well, so that e.g. governance contracts
 //! can penalize or ban attacker's nodes.
 //!
@@ -32,17 +32,24 @@
 //!   software bug), e.g. if they proposed multiple blocks with the same step number.
 
 use std::{
-    cmp, collections::{BTreeMap, BTreeSet, HashSet}, default::Default, fmt, iter::{self, FromIterator}, ops::Deref, sync::{
+    cmp,
+    collections::{BTreeMap, BTreeSet, HashSet},
+    fmt,
+    iter::{self, FromIterator},
+    ops::Deref,
+    sync::{
         atomic::{AtomicBool, AtomicU64, Ordering as AtomicOrdering},
         Arc, Weak,
-    }, time::{Duration, UNIX_EPOCH}, u64
+    },
+    time::{Duration, UNIX_EPOCH},
+    u64,
 };
-
-use crate::executive::FeesParams;
 
 use self::finality::RollingFinality;
 use super::{
-     signer::EngineSigner, validator_set::{new_validator_set_posdao, SimpleList, ValidatorSet}, EthEngine
+    signer::EngineSigner,
+    validator_set::{new_validator_set_posdao, SimpleList, ValidatorSet},
+    EthEngine,
 };
 use block::*;
 use bytes::Bytes;
@@ -79,16 +86,15 @@ use types::{
 };
 use unexpected::{Mismatch, OutOfBounds};
 
-use trace::Tracing;
 use types::{
+    receipt::{TypedReceipt},
     transaction::{Action, Error as TransactionError, Transaction, TypedTransaction},
 };
+use trace::Tracing;
 
 //mod block_gas_limit as crate_block_gas_limit;
 mod finality;
 mod randomness;
-mod block_gas_price;
-mod block_tx_fee;
 pub(crate) mod util;
 
 /// `AuthorityRound` params.
@@ -138,8 +144,6 @@ pub struct AuthorityRoundParams {
     /// If set, this is the block number at which the consensus engine switches from AuRa to AuRa
     /// with POSDAO modifications.
     pub posdao_transition: Option<BlockNumber>,
-    /// Fees contract addresses with their associated starting block numbers.
-    pub fees_contract_transitions: BTreeMap<u64, Address>,
 }
 
 const U16_MAX: usize = ::std::u16::MAX as usize;
@@ -205,18 +209,27 @@ impl From<ethjson::spec::AuthorityRoundParams> for AuthorityRoundParams {
                 BlockRewardContract::new_from_address(address.into()),
             );
         }
-
         let brm_transitions: BTreeMap<_, _> = p
             .block_reward_mode_transitions
             .unwrap_or_default()
             .into_iter()
-            .map(|(block_num, reward_mode)| (block_num.into(), reward_mode.into()))
+            .map(|(block_num, reward_mode)| {
+                (
+                    block_num.into(),
+                    reward_mode.into(),
+                )
+            })
             .collect();
         let bgr_transitions: BTreeMap<_, _> = p
             .block_gas_reserved_transitions
             .unwrap_or_default()
             .into_iter()
-            .map(|(block_num, gas_reserved)| (block_num.into(), gas_reserved.into()))
+            .map(|(block_num, gas_reserved)| {
+                (
+                    block_num.into(),
+                    gas_reserved.into(),
+                )
+            })
             .collect();
         let randomness_contract_address =
             p.randomness_contract_address
@@ -228,12 +241,6 @@ impl From<ethjson::spec::AuthorityRoundParams> for AuthorityRoundParams {
                 });
         let block_gas_limit_contract_transitions: BTreeMap<_, _> = p
             .block_gas_limit_contract_transitions
-            .unwrap_or_default()
-            .into_iter()
-            .map(|(block_num, address)| (block_num.into(), address.into()))
-            .collect();
-        let fees_transitions: BTreeMap<_, _> = p
-            .fees_contract_transitions
             .unwrap_or_default()
             .into_iter()
             .map(|(block_num, address)| (block_num.into(), address.into()))
@@ -288,7 +295,6 @@ impl From<ethjson::spec::AuthorityRoundParams> for AuthorityRoundParams {
             randomness_contract_address,
             block_gas_limit_contract_transitions,
             posdao_transition: p.posdao_transition.map(Into::into),
-            fees_contract_transitions: fees_transitions,
         }
     }
 }
@@ -715,7 +721,6 @@ pub struct AuthorityRound {
     /// modifications. For details about POSDAO, see the whitepaper:
     /// https://www.xdaichain.com/for-validators/posdao-whitepaper
     posdao_transition: Option<BlockNumber>,
-    fees_contract_transitions: BTreeMap<u64, Address>,
 }
 
 // header-chain validator.
@@ -1085,7 +1090,6 @@ impl AuthorityRound {
             block_gas_limit_contract_transitions: our_params.block_gas_limit_contract_transitions,
             gas_limit_override_cache: Mutex::new(LruCache::new(GAS_LIMIT_OVERRIDE_CACHE_CAPACITY)),
             posdao_transition: our_params.posdao_transition,
-            fees_contract_transitions: our_params.fees_contract_transitions,
         });
 
         // Do not initialize timeouts for tests.
@@ -1112,6 +1116,7 @@ impl AuthorityRound {
         } else {
             let mut epoch_manager = self.epoch_manager.lock();
             let client = self.upgrade_client_or("Unable to verify sig")?;
+
             if !epoch_manager.zoom_to_after(
                 &*client,
                 &self.machine,
@@ -1364,7 +1369,7 @@ impl AuthorityRound {
     }
 
     /// Returns the reference to the client, if registered.
-    pub fn upgrade_client_or<'a, T>(
+    fn upgrade_client_or<'a, T>(
         &self,
         opt_error_msg: T,
     ) -> Result<Arc<dyn EngineClient>, EngineError>
@@ -1493,46 +1498,48 @@ impl IoHandler<()> for TransitionHandler {
     }
 }
 
-fn push_reward_transaction(
+fn push_reward_transaction<'a>(
     machine: &EthereumMachine,
-    fees_params: Option<FeesParams>,
-    block: & mut ExecutedBlock,
+    block: &'a mut ExecutedBlock,
     t: SignedTransaction,
     h: Option<H256>,
-) -> Result<(), Error> {
+) -> Result<&'a TypedReceipt, Error> {
     if block.transactions_set.contains(&t.hash()) {
         return Err(TransactionError::AlreadyImported.into());
     }
     let tx: &UnverifiedTransaction = &*t;
     let gas = if let TypedTransaction::Legacy(txl) = tx.as_unsigned() {
-        txl.gas
-    } else {
-        U256::zero()
-    };
+                txl.gas
+            } else {
+                U256::zero()
+            };
 
     let env_info = {
         let mut env_info = block.env_info();
         env_info.gas_limit = env_info.gas_limit.saturating_add(gas);
         env_info
     };
-
     // let gas_used = env_info.gas_used;
     let outcome = block.state.apply(
         &env_info,
         machine,
-        fees_params,
         &t,
         block.traces.is_enabled(),
     )?;
 
-    block.transactions_set.insert(h.unwrap_or_else(|| t.hash()));
+    block
+        .transactions_set
+        .insert(h.unwrap_or_else(|| t.hash()));
     block.transactions.push(t.into());
     if let Tracing::Enabled(ref mut traces) = block.traces {
         traces.push(outcome.trace.into());
     }
     // let mut recept = outcome.receipt.receipt_mut();
     block.receipts.push(outcome.receipt);
-    Ok(())
+    Ok(block
+        .receipts
+        .last()
+        .expect("receipt just pushed; qed"))
 }
 
 impl Engine<EthereumMachine> for AuthorityRound {
@@ -1550,77 +1557,6 @@ impl Engine<EthereumMachine> for AuthorityRound {
         header_expected_seal_fields(header, self.empty_steps_transition)
     }
 
-    fn push_reward_transaction(&self, block: & mut ExecutedBlock) {
-        let author = *block.header.author();
-
-        let block_reward_contract_transition = self
-            .block_reward_contract_transitions
-            .range(..=block.header.number())
-            .last();
-
-        let block_reward_mode_transition = self
-            .block_reward_mode_transitions
-            .range(..=block.header.number())
-            .last();
-
-        let reward_mode = if let Some((_, mode)) = block_reward_mode_transition {
-            *mode
-        } else {
-            0
-        };
-
-        if reward_mode > 0 {
-            if let Some((_, contract)) = block_reward_contract_transition {
-                if let Some(address) = contract.address() {
-                    if !block.transactions.iter().any(|tx| {
-                        let utx = tx.unsigned.tx();
-                        utx.action == Action::Call(address)
-                            && utx.data.len() == 4
-                            && utx.data[0] == 0xc3
-                            && utx.data[1] == 0x3f
-                            && utx.data[2] == 0xb8
-                            && utx.data[3] == 0x77
-                            && public_to_address(&tx.recover_public().unwrap()) == author
-                    }) {
-                        if self.sealing_state() == SealingState::Ready {
-                            info!(target: "engine", "push_reward_transaction.");
-
-                            let block_gas_reserved_transition = self
-                                .block_gas_reserved_transitions
-                                .range(..=block.header.number())
-                                .last();
-
-                            let gas = if let Some((_, gas)) = block_gas_reserved_transition {
-                                *gas
-                            } else {
-                                1_000_000
-                            };
-
-                            let t = TypedTransaction::Legacy(Transaction {
-                                nonce: block.state.nonce(&author).unwrap(),
-                                gas_price: U256::zero(),
-                                gas: U256::from(gas),
-                                action: Action::Call(address),
-                                value: U256::zero(),
-                                data: vec![0xc3, 0x3f, 0xb8, 0x77],
-                            });
-
-                            let chain_id = self.machine.params().chain_id;
-
-                            if let Ok(signature) = self.sign(t.signature_hash(Some(chain_id))).map(Into::into) {
-                                if let Ok(tx) = SignedTransaction::new(t.with_signature(signature, Some(chain_id))) {
-                                    if let Err(e) = push_reward_transaction(&self.machine, None, block, tx, None) {
-                                        info!(target: "engine", "push_reward_transaction: {:?}", e);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     fn gas_reserved(&self, header: &Header) -> Option<U256> {
         let block_reward_mode_transition = self
             .block_reward_mode_transitions
@@ -1634,7 +1570,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
         };
 
         if reward_mode == 0 {
-            return None;
+            return None
         }
 
         let block_gas_reserved_transition = self
@@ -1646,19 +1582,6 @@ impl Engine<EthereumMachine> for AuthorityRound {
             Some(U256::from(*gas))
         } else {
             None
-        }
-    }
-
-    fn reward_mode(&self, header: &Header) -> u64 {
-        let block_reward_mode_transition = self
-            .block_reward_mode_transitions
-            .range(..=header.number())
-            .last();
-
-        if let Some((_, mode)) = block_reward_mode_transition {
-            *mode
-        } else {
-            0
         }
     }
 
@@ -1899,8 +1822,6 @@ impl Engine<EthereumMachine> for AuthorityRound {
             Ok(ok) => ok,
         };
 
-        trace!(target: "engine", "generate_seal: check is step proposer.");
-
         if is_step_proposer(&*validators, header.parent_hash(), step, header.author()) {
             // this is guarded against by `can_propose` unless the block was signed
             // on the same step (implies same key) and on a different node.
@@ -1934,8 +1855,6 @@ impl Engine<EthereumMachine> for AuthorityRound {
             } else {
                 None
             };
-
-            trace!(target: "engine", "generate_seal: signing...");
 
             if let Ok(signature) = self.sign(header_seal_hash(
                 header,
@@ -2073,7 +1992,54 @@ impl Engine<EthereumMachine> for AuthorityRound {
             0
         };
 
-        if reward_mode == 0 {
+        if reward_mode > 0 {
+            if let Some((_, contract)) = block_reward_contract_transition {
+                if let Some(address) = contract.address() {
+                    if !block.transactions.iter().any(|tx| {
+                        let utx = tx.unsigned.tx();
+                        utx.action == Action::Call(address) && utx.data.len() == 4 && utx.data[0] == 0xc3 && utx.data[1] == 0x3f && utx.data[2] == 0xb8 && utx.data[3] == 0x77 && public_to_address(&tx.recover_public().unwrap()) == author
+                    }) {
+                        if self.sealing_state() == SealingState::Ready {
+                            info!(target: "engine", "push_reward_transaction.");
+
+                            let block_gas_reserved_transition = self
+                                .block_gas_reserved_transitions
+                                .range(..=block.header.number())
+                                .last();
+
+                            let gas = if let Some((_, gas)) = block_gas_reserved_transition {
+                                *gas
+                            } else {
+                                1_000_000
+                            };
+
+                            let t = TypedTransaction::Legacy(Transaction {
+                                nonce: block.state.nonce(&author).unwrap(),
+                                gas_price: U256::zero(),
+                                gas: U256::from(gas),
+                                action: Action::Call(address),
+                                value: U256::zero(),
+                                data: vec![0xc3, 0x3f, 0xb8, 0x77],
+                            });
+
+                            let chain_id = self.machine.params().chain_id;
+
+                            if let Some(signer) = self.signer.read().as_ref() {
+                                let signature = signer.sign(t.signature_hash(Some(chain_id))).unwrap();
+                                let tx = SignedTransaction::new(t.with_signature(signature, Some(chain_id)))?;
+
+                                if let Err(e) = push_reward_transaction(&self.machine, block, tx, None) {
+                                    info!(target: "engine", "push_reward_transaction: {:?}", e);
+                                }
+
+                                let our_addr = signer.address();
+                                self.validators.on_close_block(&block.header, &our_addr)?
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
             let rewards: Vec<_> = if let Some((_, contract)) = block_reward_contract_transition {
                 let mut call = crate::engines::default_system_or_code_call(&self.machine, block);
                 let rewards = contract.reward(&beneficiaries, &mut call)?;
@@ -2340,8 +2306,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
         }
 
         let first = header.number() == 0;
-        self.validators
-            .signals_epoch_end(first, header, aux, self.machine())
+        self.validators.signals_epoch_end(first, header, aux, self.machine())
     }
 
     fn is_epoch_end(
@@ -2536,59 +2501,6 @@ impl Engine<EthereumMachine> for AuthorityRound {
             .insert(header.hash(), limit);
         limit
     }
-
-    fn get_gas_price(&self, header: &Header) -> Option<U256> {
-        if let Some(address) = self.current_fees_address(header) {
-            let cl = self.upgrade_client_or("Failed to get the client").expect("Failed to get the client");
-            let client = cl.as_full_client().unwrap();
-            block_gas_price::block_gas_price(client, header, address)
-        } else {
-            None
-        }
-    }
-
-    fn get_fee_params(&self, header: &Header) -> Option<FeesParams> {
-        if let Some(address) = self.current_fees_address(header) {
-            let cl = self.upgrade_client_or("Failed to get the client").expect("Failed to get the client");
-            let client = cl.as_full_client().unwrap();
-            block_tx_fee::block_tx_fee(client, header, address)
-        } else {
-            None
-        }
-    }
-
-    fn current_fees_address(&self, header: &Header) -> Option<Address> {
-        let fees_contract_transition = self
-            .fees_contract_transitions
-            .range(..=header.number())
-            .last();
-        if let Some((_, address)) = fees_contract_transition {
-            // trace!(target: "engine", "Got fees contract transition on block number {}", header.number());
-            return Some(*address);
-        } else {
-            // trace!(target: "engine", "No fees contract transition on blcok number {}", header.number());
-            return None;
-        }
-    }
-
-    fn current_block_reward_address(&self, header: &Header) -> Option<Address> {
-        let block_reward_mode_transition = self
-            .block_reward_mode_transitions
-            .range(..=header.number())
-            .last();
-
-        let block_reward_contract_transition = self
-            .block_reward_contract_transitions
-            .range(..=header.number())
-            .last();
-
-        if let Some((_, _)) = block_reward_mode_transition {
-            if let Some((_, contract)) = block_reward_contract_transition {
-                return contract.address();
-            }
-        }
-        return None;
-    }
 }
 
 /// A helper accumulator function mapping a step duration and a step duration transition timestamp
@@ -2647,7 +2559,6 @@ mod tests {
         transaction::{Action, Transaction, TypedTransaction},
     };
 
-    //TODO: Fix tests
     fn aura<F>(f: F) -> Arc<AuthorityRound>
     where
         F: FnOnce(&mut AuthorityRoundParams),
@@ -2670,6 +2581,8 @@ mod tests {
             randomness_contract_address: BTreeMap::new(),
             block_gas_limit_contract_transitions: BTreeMap::new(),
             posdao_transition: Some(0),
+            block_gas_reserved_transitions: Default::default(),
+            block_reward_mode_transitions: Default::default(),
         };
 
         // mutate aura params
@@ -3668,6 +3581,147 @@ mod tests {
         )
     }
 
+    #[test]
+    fn block_reward_transaction() {
+        let spec = Spec::new_test_round_block_reward_transaction();
+        let tap = Arc::new(AccountProvider::transient_provider());
+
+        let addr1 = tap.insert_account(keccak("1").into(), &"1".into()).unwrap();
+
+        let engine = &*spec.engine;
+        let genesis_header = spec.genesis_header();
+        let db1 = spec
+            .ensure_db_good(get_temp_state_db(), &Default::default())
+            .unwrap();
+
+        let last_hashes = Arc::new(vec![genesis_header.hash()]);
+
+        let client = generate_dummy_client_with_spec(Spec::new_test_round_block_reward_transaction);
+        engine.register_client(Arc::downgrade(&client) as _);
+        engine.set_signer(Some(Box::new((tap.clone(), addr1, "1".into()))));
+
+        // step 1
+
+        let b1 = OpenBlock::new(
+            engine,
+            Default::default(),
+            false,
+            db1,
+            &genesis_header,
+            last_hashes.clone(),
+            addr1,
+            (3141562.into(), 31415620.into()),
+            vec![],
+            false,
+            None,
+        )
+        .unwrap();
+        let addr1_balance = b1.state.balance(&addr1).unwrap();
+        let b1 = b1.close().unwrap();
+
+        // the contract rewards 10000 for block author
+        assert_eq!(
+            b1.state.balance(&addr1).unwrap(),
+            addr1_balance + 10000,
+        )
+    }
+
+    #[test]
+    fn block_reward_transaction_gas_reservation() {
+        let spec = Spec::new_test_round_block_reward_transaction();
+        let tap = Arc::new(AccountProvider::transient_provider());
+
+        let addr1 = tap.insert_account(keccak("1").into(), &"1".into()).unwrap();
+        let addr2 = tap.insert_account(keccak("2").into(), &"2".into()).unwrap();
+
+        let engine = &*spec.engine;
+        let genesis_header = spec.genesis_header();
+        let db1 = spec
+            .ensure_db_good(get_temp_state_db(), &Default::default())
+            .unwrap();
+
+        let last_hashes = Arc::new(vec![genesis_header.hash()]);
+
+        let client = generate_dummy_client_with_spec(Spec::new_test_round_block_reward_transaction);
+        engine.register_client(Arc::downgrade(&client) as _);
+        engine.set_signer(Some(Box::new((tap.clone(), addr1, "1".into()))));
+
+        // step 1
+
+        let mut b1 = OpenBlock::new(
+            engine,
+            Default::default(),
+            false,
+            db1,
+            &genesis_header,
+            last_hashes.clone(),
+            addr1,
+            (1050000.into(), 1050000.into()),
+            vec![],
+            false,
+            None,
+        )
+        .unwrap();
+        let addr1_balance = b1.state.balance(&addr1).unwrap();
+
+        // Gas limit from the genesis block is 1050000
+        // reserved for the reward transaction - 1000000
+        // transfer: 1050000 - 21000 = 1029000 - OK
+        let tx = TypedTransaction::Legacy(Transaction {
+                action: Action::Call(addr2),
+                nonce: 0.into(),
+                gas_price: U256::zero(),
+                gas: 21000.into(),
+                value: U256::zero(),
+                data: vec![],
+            })
+            .fake_sign(addr1);
+
+        assert_eq!(
+            b1.push_transaction(tx, None, true).is_ok(),
+            true,
+        );
+
+        // transfer: 1029000 - 21000 = 1008000 - OK
+        let tx = TypedTransaction::Legacy(Transaction {
+                action: Action::Call(addr2),
+                nonce: 1.into(),
+                gas_price: U256::zero(),
+                gas: 21000.into(),
+                value: U256::zero(),
+                data: vec![],
+            })
+            .fake_sign(addr1);
+
+        assert_eq!(
+            b1.push_transaction(tx, None, true).is_ok(),
+            true,
+        );
+
+        // transfer: 1008000 - 21000 = 987000 - FAIL
+        let tx = TypedTransaction::Legacy(Transaction {
+                action: Action::Call(addr2),
+                nonce: 2.into(),
+                gas_price: U256::zero(),
+                gas: 21000.into(),
+                value: U256::zero(),
+                data: vec![],
+            })
+            .fake_sign(addr1);
+
+        assert_eq!(
+            b1.push_transaction(tx, None, true).is_ok(),
+            false,
+        );
+
+        let b1 = b1.close().unwrap();
+
+        // the contract rewards 10000 for block author
+        assert_eq!(
+            b1.state.balance(&addr1).unwrap(),
+            addr1_balance + 10000,
+        )
+    }
     #[test]
     fn randomness_contract() -> Result<(), super::util::CallError> {
         use_contract!(

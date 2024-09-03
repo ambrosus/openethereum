@@ -51,11 +51,9 @@ use engines::EthEngine;
 use error::{Error, EthcoreResult};
 use executed::CallError;
 use executive::Executed;
-use state::{StateInfo, State};
+use state::StateInfo;
 use trace::LocalizedTrace;
 use verification::queue::{kind::blocks::Unverified, QueueInfo as BlockQueueInfo};
-
-use crate::state_db::StateDB;
 
 /// State information to be used during client query
 pub enum StateOrBlock {
@@ -492,9 +490,6 @@ pub trait BlockChainClient:
 
     /// Returns true, if underlying import queue is processing possible fork at the moment
     fn is_processing_fork(&self) -> bool;
-
-	/// Returns latest known state and header. Created only to get gas price on the verification stage.
-	fn latest_state_and_header_external(&self) -> (State<StateDB>, Header);
 }
 
 /// The data required for a `Client` to create a transaction.
@@ -622,9 +617,6 @@ pub trait EngineClient: Sync + Send + ChainInfo {
 
     /// Get raw block header data by block id.
     fn block_header(&self, id: BlockId) -> Option<encoded::Header>;
-
-	/// Proxy to the Client::call to use in engine. Added to get gas_price.
-	fn proxy_call(&self, transaction: &SignedTransaction, analytics: CallAnalytics, state: &mut State<StateDB>, header: &Header) -> Option<Bytes>;
 }
 
 /// Extended client interface for providing proofs of the state.

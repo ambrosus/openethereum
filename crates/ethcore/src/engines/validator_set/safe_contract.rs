@@ -338,7 +338,7 @@ impl ValidatorSafeContract {
         bloom: Bloom,
         header: &Header,
         receipts: &[TypedReceipt],
-        machine: &EthereumMachine,
+        machine: &EthereumMachine, 
     ) -> Option<SimpleList> {
         let check_log = |log: &LogEntry| {
             log.address == self.contract_address

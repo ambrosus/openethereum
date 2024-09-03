@@ -377,7 +377,6 @@ pub fn execute(cmd: RunCmd, logger: Arc<RotatingLogger>) -> Result<RunningClient
         *client.best_block_header().gas_limit(),
         base_fee,
         allow_non_eoa_sender,
-        None,
     );
 
     let connection_filter = connection_filter_address.map(|a| {

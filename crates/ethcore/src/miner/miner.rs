@@ -385,45 +385,19 @@ impl Miner {
         block_gas_limit: U256,
         block_base_fee: Option<U256>,
         allow_non_eoa_sender: bool,
-        gas_price: Option<U256>,
     ) {
-        if let Some(new_price) = gas_price {
-            match *self.gas_pricer.lock() {
-                // Binding the gas pricer to `gp` here to prevent
-                // a deadlock when calling recalibrate()
-                ref mut gp @ GasPricer::Fixed(_) => {
-                    trace!(target: "miner", "minimal_gas_price: recalibrating fixed...");
-                    *gp = GasPricer::new_fixed(new_price);
+        trace!(target: "miner", "minimal_gas_price: recalibrating...");
+        let txq = self.transaction_queue.clone();
+        let mut options = self.options.pool_verification_options.clone();
+        self.gas_pricer.lock().recalibrate(move |gas_price| {
+            debug!(target: "miner", "minimal_gas_price: Got gas price! {}", gas_price);
+            options.minimal_gas_price = gas_price;
+            options.block_gas_limit = block_gas_limit;
+            options.block_base_fee = block_base_fee;
+            options.allow_non_eoa_sender = allow_non_eoa_sender;
+            txq.set_verifier_options(options);
+        });
 
-                    let txq = self.transaction_queue.clone();
-                    let mut options = self.options.pool_verification_options.clone();
-                    gp.recalibrate(move |gas_price| {
-                        debug!(target: "miner", "minimal_gas_price: Got gas price! {}", gas_price);
-                        options.minimal_gas_price = gas_price;
-                        options.block_gas_limit = block_gas_limit;
-                        options.block_base_fee = block_base_fee;
-                        options.allow_non_eoa_sender = allow_non_eoa_sender;
-                        txq.set_verifier_options(options);
-                    });
-                }
-                #[cfg(feature = "price-info")]
-                GasPricer::Calibrated(_) => {
-                    debug!(target: "miner","Can't update fixed gas price while automatic gas calibration is enabled.");
-                }
-            }
-        } else {
-            trace!(target: "miner", "minimal_gas_price: recalibrating...");
-            let txq = self.transaction_queue.clone();
-            let mut options = self.options.pool_verification_options.clone();
-            self.gas_pricer.lock().recalibrate(move |gas_price| {
-                debug!(target: "miner", "minimal_gas_price: Got gas price! {}", gas_price);
-                options.minimal_gas_price = gas_price;
-                options.block_gas_limit = block_gas_limit;
-                options.block_base_fee = block_base_fee;
-                options.allow_non_eoa_sender = allow_non_eoa_sender;
-                txq.set_verifier_options(options);
-            });
-        }
         match block_base_fee {
             Some(block_base_fee) => self.transaction_queue.update_scoring(block_base_fee),
             None => (),
@@ -534,11 +508,6 @@ impl Miner {
         let mut not_allowed_transactions = HashSet::new();
         let mut senders_to_penalize = HashSet::new();
         let block_number = open_block.header.number();
-
-        if let Some(price) = open_block.get_current_gas_price() {
-        	self.set_minimal_gas_price(price)
-               .expect("Failed to set the gas price");
-    	}
 
         let mut tx_count = 0usize;
         let mut skipped_transactions = 0usize;
@@ -671,9 +640,6 @@ impl Miner {
                 _ => tx_count += 1,
             }
         }
-
-        self.engine.push_reward_transaction(open_block.block_mut());
-
         let elapsed = block_start.elapsed();
         debug!(target: "miner", "Pushed {} transactions in {} ms", tx_count, took_ms(&elapsed));
 
@@ -1081,10 +1047,6 @@ impl miner::MinerService for Miner {
                 return Err(error_msg);
             }
         }
-    }
-
-    fn get_minimal_gas_price(&self) -> U256 {
-        self.options.pool_verification_options.minimal_gas_price
     }
 
     fn import_external_transactions<C: miner::BlockChainClient>(
@@ -1511,8 +1473,7 @@ impl miner::MinerService for Miner {
         let allow_non_eoa_sender = self
             .engine
             .allow_non_eoa_sender(chain.best_block_header().number() + 1);
-        let gas_price = self.engine.get_gas_price(&chain.best_block_header());
-        self.update_transaction_queue_limits(gas_limit, base_fee, allow_non_eoa_sender, gas_price);
+        self.update_transaction_queue_limits(gas_limit, base_fee, allow_non_eoa_sender);
 
         // t_nb 10.2 Then import all transactions from retracted blocks (retracted means from side chain).
         let client = self.pool_client(chain);
@@ -1790,8 +1751,8 @@ mod tests {
         miner.chain_new_blocks(&*client, &imported, empty, &imported, empty, false);
 
         // then
-        // This should be false, because it's too early.
-        assert_eq!(miner.requires_reseal(2), false);
+        // This should be true, because fast reseal is enabled.
+        assert_eq!(miner.requires_reseal(2), true);
         // but still work package should be ready
         let res = miner.work_package(&*client);
         assert_eq!(res.unwrap().1, 3);

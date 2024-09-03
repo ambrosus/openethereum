@@ -358,12 +358,8 @@ impl From<ethjson::spec::Params> for CommonParams {
                 .map_or_else(BlockNumber::max_value, Into::into),
             eip155_transition: p.eip155_transition.map_or(0, Into::into),
             validate_receipts_transition: p.validate_receipts_transition.map_or(0, Into::into),
-            fix_validator_set_transition: p
-                .fix_validator_set_transition
-                .map_or_else(BlockNumber::max_value, Into::into),
-            refix_validator_set_transition: p
-                .refix_validator_set_transition
-                .map_or_else(BlockNumber::max_value, Into::into),
+            fix_validator_set_transition: p.fix_validator_set_transition.map_or_else(BlockNumber::max_value, Into::into),
+            refix_validator_set_transition: p.refix_validator_set_transition.map_or_else(BlockNumber::max_value, Into::into),
             validate_chain_id_transition: p.validate_chain_id_transition.map_or(0, Into::into),
             eip140_transition: p
                 .eip140_transition
@@ -1199,6 +1195,13 @@ impl Spec {
     #[cfg(any(test, feature = "test-helpers"))]
     pub fn new_test_round_block_reward_contract() -> Self {
         load_bundled!("test/authority_round_block_reward_contract")
+    }
+
+    /// Create a new Spec with AuthorityRound consensus (with empty steps) using a block reward
+    /// transaction.
+    #[cfg(any(test, feature = "test-helpers"))]
+    pub fn new_test_round_block_reward_transaction() -> Self {
+        load_bundled!("test/authority_round_block_reward_transaction")
     }
 
     /// TestList.sol used in both specs: https://github.com/paritytech/contracts/pull/30/files (link not valid)

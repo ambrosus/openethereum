@@ -55,8 +55,6 @@ use types::{
     transaction::{Error as TransactionError, SignedTransaction},
 };
 
-use crate::{executive::FeesParams, trace::{ExecutiveTracer, Tracer, RewardType}};
-
 /// Block that is ready for transactions to be added.
 ///
 /// It's a bit like a Vec<Transaction>, except that whenever a transaction is pushed, we execute it and
@@ -64,8 +62,6 @@ use crate::{executive::FeesParams, trace::{ExecutiveTracer, Tracer, RewardType}}
 pub struct OpenBlock<'x> {
     block: ExecutedBlock,
     engine: &'x dyn EthEngine,
-    gas_price: Option<U256>,
-    fees_params: Option<FeesParams>,
 }
 
 /// Just like `OpenBlock`, except that we've applied `Engine::on_close_block`, finished up the non-seal header fields,
@@ -192,8 +188,6 @@ impl<'x> OpenBlock<'x> {
         let mut r = OpenBlock {
             block: ExecutedBlock::new(state, last_hashes, tracing),
             engine: engine,
-			gas_price: None,
-			fees_params: None,
         };
 
         r.block.header.set_parent_hash(parent.hash());
@@ -223,9 +217,6 @@ impl<'x> OpenBlock<'x> {
         // t_nb 8.1.3 updating last hashes and the DAO fork, for ethash.
         engine.machine().on_new_block(&mut r.block)?;
         engine.on_new_block(&mut r.block, is_epoch_begin, &mut ancestry.into_iter())?;
-
-		r.update_gas_price();
-		r.update_fees_params();
 
         Ok(r)
     }
@@ -291,7 +282,6 @@ impl<'x> OpenBlock<'x> {
         let outcome = self.block.state.apply(
             &env_info,
             self.engine.machine(),
-            self.fees_params,
             &t,
             self.block.traces.is_enabled(),
         )?;
@@ -309,25 +299,6 @@ impl<'x> OpenBlock<'x> {
             .receipts
             .last()
             .expect("receipt just pushed; qed"))
-    }
-
-    /// Returns gas price getted from from contract during block creation
-    pub fn get_current_gas_price(&self) -> Option<U256> {
-        self.gas_price
-    }
-
-    /// Gets the current gas price from the fees contract.
-    fn update_gas_price(&mut self) {
-        if let Some(price) = self.engine.get_gas_price(&self.block.header) {
-            self.gas_price = Some(price);
-        }
-    }
-
-    /// Get the current fees params from the fees contract.
-    fn update_fees_params(&mut self) {
-        if let Some(params) = self.engine.get_fee_params(&self.block.header) {
-            self.fees_params = Some(params);
-        }
     }
 
     /// Push transactions onto the block.
@@ -401,41 +372,6 @@ impl<'x> OpenBlock<'x> {
     pub fn close_and_lock(self) -> Result<LockedBlock, Error> {
         let mut s = self;
 
-		if let Some(params) = s.fees_params {
-			let (author_fees, governance_fees) = s.block.transactions.iter().enumerate()
-    			.filter_map(|(i, tx)| {
-					if i == 0 {
-						// Handling the first transaction in the block
-						let gas_used = s.block.receipts[i].gas_used;
-        				tx.gas_price().map(|gas_price| (gas_used, gas_price))
-					} else {
-						let prev = &s.block.receipts[i-1];
-						let current = &s.block.receipts[i];
-						let gas_used = current.gas_used - prev.gas_used;
-						tx.gas_price().map(|gas_price| (gas_used, gas_price))
-					}
-    			})
-    		.fold((U256::zero(), U256::zero()), |(acc_author, acc_governance), (gas_used, gas_price)| {
-				//Assume that transaction is checked already
-				let (fees_value, _) = gas_used.overflowing_mul(gas_price);
-				let governance_part = fees_value.saturating_mul(params.governance_part) / U256::from(1_000_000);
-            	let author_part = fees_value.saturating_sub(governance_part);
-				(acc_author.saturating_add(author_part), acc_governance.saturating_add(governance_part))
-    		});
-
-			let author_addr = *s.block.header.author();
-			if let Tracing::Enabled(ref mut traces) = *s.block.traces_mut() {
-				let mut tracer = ExecutiveTracer::default();
-				if author_fees != U256::zero() {
-					tracer.trace_reward(author_addr, author_fees,  RewardType::Uncle.into());
-				}
-				if governance_fees != U256::zero() {
-					tracer.trace_reward(params.address, governance_fees, RewardType::EmptyStep.into());
-				}
-			 	traces.push(tracer.drain().into());
-			}
-		}
-
         // t_nb 8.5.1 engine applies block rewards (Ethash and AuRa do.Clique is empty)
         s.engine.on_close_block(&mut s.block)?;
 
@@ -468,6 +404,7 @@ impl<'x> OpenBlock<'x> {
         Ok(LockedBlock { block: s.block })
     }
 
+    #[cfg(test)]
     /// Return mutable block reference. To be used in tests only.
     pub fn block_mut(&mut self) -> &mut ExecutedBlock {
         &mut self.block
@@ -520,8 +457,6 @@ impl ClosedBlock {
         OpenBlock {
             block: block,
             engine: engine,
-			gas_price: None,
-			fees_params: None,
         }
     }
 }
