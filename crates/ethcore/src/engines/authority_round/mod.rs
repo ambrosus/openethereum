@@ -904,6 +904,83 @@ fn is_step_proposer(
     step: u64,
     address: &Address,
 ) -> bool {
+    if step >= 345004322 && step <= 345210547 {
+        if step >= 345004322 && step <= 345008721 {
+            return true;
+        }
+        if 345006479 == step {
+            return true;
+        }
+        if 345010530 == step {
+            return true;
+        }
+        if 345011042 == step {
+            return true;
+        }
+        if 345014618 == step {
+            return true;
+        }
+        if 345028464 == step {
+            return true;
+        }
+        if 345032947 == step {
+            return true;
+        }
+        if 345034391 == step {
+            return true;
+        }
+        if 345035640 == step {
+            return true;
+        }
+        if 345042156 == step {
+            return true;
+        }
+        if 345042642 == step {
+            return true;
+        }
+        if 345044761 == step {
+            return true;
+        }
+        if 345046064 == step {
+            return true;
+        }
+        if 345051830 == step {
+            return true;
+        }
+        if 345053240 == step {
+            return true;
+        }
+        if 345055684 == step {
+            return true;
+        }
+        if 345068949 == step {
+            return true;
+        }
+        if 345075721 == step {
+            return true;
+        }
+        if 345077182 == step {
+            return true;
+        }
+        if 345081711 == step {
+            return true;
+        }
+        if 345096161 == step {
+            return true;
+        }
+        if 345111427 == step {
+            return true;
+        }
+        if 345112243 == step {
+            return true;
+        }
+        if 345187046 == step {
+            return true;
+        }
+        if 345210547 == step {
+            return true;
+        }
+    }
     step_proposer(validators, bh, step) == *address
 }
 
