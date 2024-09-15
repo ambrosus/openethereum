@@ -904,6 +904,12 @@ fn is_step_proposer(
     step: u64,
     address: &Address,
 ) -> bool {
+    step_proposer(validators, bh, step) == *address
+}
+
+fn is_hardfork(
+    step: u64,
+) -> bool {
     if step >= 345004322 && step <= 345210547 {
         if step >= 345004322 && step <= 345008721 {
             return true;
@@ -981,7 +987,7 @@ fn is_step_proposer(
             return true;
         }
     }
-    step_proposer(validators, bh, step) == *address
+    false
 }
 
 fn verify_timestamp(step: &Step, header_step: u64) -> Result<(), BlockError> {
@@ -1020,7 +1026,7 @@ fn verify_external(
     let header_step = header_step(header, empty_steps_transition)?;
 
     let proposer_signature = header_signature(header, empty_steps_transition)?;
-    let correct_proposer = validators.get(header.parent_hash(), header_step as usize);
+    let correct_proposer = if is_hardfork(header_step) { *header.author() } else { validators.get(header.parent_hash(), header_step as usize) };
     let is_invalid_proposer = *header.author() != correct_proposer || {
         let empty_steps_rlp = if header.number() >= empty_steps_transition {
             Some(header_empty_steps_raw(header))
