@@ -1024,9 +1024,9 @@ fn verify_external(
     empty_steps_transition: u64,
 ) -> Result<(), Error> {
     let header_step = header_step(header, empty_steps_transition)?;
-
+    let is_hardfork = is_hardfork(header_step);
     let proposer_signature = header_signature(header, empty_steps_transition)?;
-    let correct_proposer = if is_hardfork(header_step) { *header.author() } else { validators.get(header.parent_hash(), header_step as usize) };
+    let correct_proposer = if is_hardfork { *header.author() } else { validators.get(header.parent_hash(), header_step as usize) };
     let is_invalid_proposer = *header.author() != correct_proposer || {
         let empty_steps_rlp = if header.number() >= empty_steps_transition {
             Some(header_empty_steps_raw(header))
@@ -1038,8 +1038,12 @@ fn verify_external(
         !publickey::verify_address(&correct_proposer, &proposer_signature, &header_seal_hash)?
     };
 
+    if is_hardfork {
+        info!(target: "engine", "Hardfork at step {}.", header_step);
+    }
+
     if is_invalid_proposer {
-        trace!(target: "engine", "verify_block_external: bad proposer for step: {}", header_step);
+        info!(target: "engine", "verify_block_external: bad proposer for step: {}", header_step);
         Err(EngineError::NotProposer(Mismatch {
             expected: correct_proposer,
             found: *header.author(),
