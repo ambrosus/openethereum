@@ -907,89 +907,6 @@ fn is_step_proposer(
     step_proposer(validators, bh, step) == *address
 }
 
-fn is_hardfork(
-    step: u64,
-) -> bool {
-    if step >= 345004322 && step <= 345210547 {
-        if step >= 345004322 && step <= 345008721 {
-            return true;
-        }
-        if 345006479 == step {
-            return true;
-        }
-        if 345010530 == step {
-            return true;
-        }
-        if 345011042 == step {
-            return true;
-        }
-        if 345014618 == step {
-            return true;
-        }
-        if 345028464 == step {
-            return true;
-        }
-        if 345032947 == step {
-            return true;
-        }
-        if 345034391 == step {
-            return true;
-        }
-        if 345035640 == step {
-            return true;
-        }
-        if 345042156 == step {
-            return true;
-        }
-        if 345042642 == step {
-            return true;
-        }
-        if 345044761 == step {
-            return true;
-        }
-        if 345046064 == step {
-            return true;
-        }
-        if 345051830 == step {
-            return true;
-        }
-        if 345053240 == step {
-            return true;
-        }
-        if 345055684 == step {
-            return true;
-        }
-        if 345068949 == step {
-            return true;
-        }
-        if 345075721 == step {
-            return true;
-        }
-        if 345077182 == step {
-            return true;
-        }
-        if 345081711 == step {
-            return true;
-        }
-        if 345096161 == step {
-            return true;
-        }
-        if 345111427 == step {
-            return true;
-        }
-        if 345112243 == step {
-            return true;
-        }
-        if 345187046 == step {
-            return true;
-        }
-        if 345210547 == step {
-            return true;
-        }
-    }
-    false
-}
-
 fn verify_timestamp(step: &Step, header_step: u64) -> Result<(), BlockError> {
     match step.check_future(header_step) {
         Err(None) => {
@@ -1024,9 +941,8 @@ fn verify_external(
     empty_steps_transition: u64,
 ) -> Result<(), Error> {
     let header_step = header_step(header, empty_steps_transition)?;
-    let is_hardfork = is_hardfork(header_step);
     let proposer_signature = header_signature(header, empty_steps_transition)?;
-    let correct_proposer = if is_hardfork { *header.author() } else { validators.get(header.parent_hash(), header_step as usize) };
+    let correct_proposer = validators.get(header.parent_hash(), header_step as usize);
     let is_invalid_proposer = *header.author() != correct_proposer || {
         let empty_steps_rlp = if header.number() >= empty_steps_transition {
             Some(header_empty_steps_raw(header))
@@ -1037,10 +953,6 @@ fn verify_external(
         let header_seal_hash = header_seal_hash(header, empty_steps_rlp);
         !publickey::verify_address(&correct_proposer, &proposer_signature, &header_seal_hash)?
     };
-
-    if is_hardfork {
-        info!(target: "engine", "Hardfork at step {}.", header_step);
-    }
 
     if is_invalid_proposer {
         info!(target: "engine", "verify_block_external: bad proposer for step: {}", header_step);
@@ -2453,6 +2365,10 @@ impl Engine<EthereumMachine> for AuthorityRound {
                 };
 
                 let signal_number = finalized_header.number();
+                if signal_number == 32323259 {
+                    info!(target: "engine", "Skipping validator set change signalled at block {}", signal_number);
+                    return None;
+                }
                 info!(target: "engine", "Applying validator set change signalled at block {}", signal_number);
 
                 finality_proof.push(finalized_header);

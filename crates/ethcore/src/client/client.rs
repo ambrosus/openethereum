@@ -257,90 +257,6 @@ pub struct Client {
     importer: Importer,
 }
 
-fn is_hardfork(
-    number: u64,
-) -> bool {
-    if number >= 32323342 && number <= 32504329 {
-        if number >= 32323342 && number <= 32326760 {
-            return true;
-        }
-
-        if 32325019 == number {
-            return true;
-        }
-        if 32328177 == number {
-            return true;
-        }
-        if 32328573 == number {
-            return true;
-        }
-        if 32331477 == number {
-            return true;
-        }
-        if 32342549 == number {
-            return true;
-        }
-        if 32346141 == number {
-            return true;
-        }
-        if 32347300 == number {
-            return true;
-        }
-        if 32348294 == number {
-            return true;
-        }
-        if 32353623 == number {
-            return true;
-        }
-        if 32353995 == number {
-            return true;
-        }
-        if 32355703 == number {
-            return true;
-        }
-        if 32356753 == number {
-            return true;
-        }
-        if 32361383 == number {
-            return true;
-        }
-        if 32362537 == number {
-            return true;
-        }
-        if 32364520 == number {
-            return true;
-        }
-        if 32376286 == number {
-            return true;
-        }
-        if 32382124 == number {
-            return true;
-        }
-        if 32383379 == number {
-            return true;
-        }
-        if 32387386 == number {
-            return true;
-        }
-        if 32400451 == number {
-            return true;
-        }
-        if 32413500 == number {
-            return true;
-        }
-        if 32414179 == number {
-            return true;
-        }
-        if 32482796 == number {
-            return true;
-        }
-        if 32504329 == number {
-            return true;
-        }
-    }
-    false
-}
-
 impl Importer {
     pub fn new(
         config: &ClientConfig,
@@ -654,9 +570,7 @@ impl Importer {
             .verify_block_final(&header, &locked_block.header)
         {
             warn!(target: "client", "Stage 5 block verification failed for #{} ({})\nError: {:?}", header.number(), header.hash(), e);
-            if !is_hardfork(header.number()) {
-                bail!(e);
-            }
+            bail!(e);
         }
 
         let pending = self.check_epoch_end_signal(
