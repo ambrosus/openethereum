@@ -640,6 +640,9 @@ impl Miner {
                 _ => tx_count += 1,
             }
         }
+
+        self.engine.push_reward_transaction(open_block.block_mut());
+
         let elapsed = block_start.elapsed();
         debug!(target: "miner", "Pushed {} transactions in {} ms", tx_count, took_ms(&elapsed));
 

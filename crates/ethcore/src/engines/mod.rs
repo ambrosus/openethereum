@@ -329,9 +329,18 @@ pub trait Engine<M: Machine>: Sync + Send {
         None
     }
 
+    /// Push reward transaction.
+    fn push_reward_transaction(&self, _block: & mut ExecutedBlock) {
+    }
+
     /// Optional gas reserved.
     fn gas_reserved(&self, _header: &Header) -> Option<U256> {
         None
+    }
+
+    /// Reward mode.
+    fn reward_mode(&self, _header: &Header) -> u64 {
+        0
     }
 
     /// Block transformation functions, before the transactions.
