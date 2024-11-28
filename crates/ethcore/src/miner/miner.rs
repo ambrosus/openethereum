@@ -641,7 +641,8 @@ impl Miner {
             }
         }
 
-        self.engine.push_reward_transaction(open_block.block_mut());
+        let fees_params = open_block.get_fees_params();
+        self.engine.push_reward_transaction(open_block.block_mut(), fees_params);
 
         let elapsed = block_start.elapsed();
         debug!(target: "miner", "Pushed {} transactions in {} ms", tx_count, took_ms(&elapsed));

@@ -22,11 +22,13 @@ use std::{
     sync::Arc,
 };
 
+use crate::crypto::publickey::public_to_address;
+
 use ethereum_types::{Address, H256, U256};
 use types::{
     header::Header,
     transaction::{
-        self, SignedTransaction, TypedTransaction, UnverifiedTransaction, SYSTEM_ADDRESS,
+        self, SignedTransaction, TypedTransaction, UnverifiedTransaction, SYSTEM_ADDRESS, Action,
         UNSIGNED_SENDER,
     },
     BlockNumber,
@@ -374,7 +376,53 @@ impl EthereumMachine {
         &self,
         t: UnverifiedTransaction,
         header: &Header,
+		gas_price: Option<U256>,
+		current_block_reward_addr: Option<Address>,
     ) -> Result<SignedTransaction, transaction::Error> {
+		// Cheching block reward transaction. It should be verified with zero gas price
+		// all other should pay at least minimal gas price
+		// Check transaction sended by the block author
+		let public = t.recover_public()?;
+		let sender = public_to_address(&public);
+		let sended_by_block_author = sender == *header.author();
+
+		//Check if transaction has block reward specific data
+		let has_reward_data = match t.as_unsigned() {
+			TypedTransaction::Legacy(tx) => {
+				tx.data == vec![0xc3, 0x3f, 0xb8, 0x77]
+			}
+			_ => false,
+		};
+
+		//Check if transaction calling the correct contract
+		let calling_block_reward = match t.as_unsigned() {
+			TypedTransaction::Legacy(tx) => {
+				match tx.action {
+					Action::Call(addr) => {
+						if let Some(reward_address) = current_block_reward_addr {
+							addr == reward_address
+						} else {
+							false
+						}
+					}
+					_ => false,
+				}
+			}
+			_ => false,
+		};
+
+		let is_block_reward_tx = sended_by_block_author && has_reward_data && calling_block_reward;
+
+		if !is_block_reward_tx {
+			if let Some(price) = gas_price {
+				if t.tx().gas_price < price {
+					return Err(transaction::Error::InsufficientGas { minimal: price, got: t.tx().gas_price });
+				}
+			}
+		}
+
+
+
         // ensure that the user was willing to at least pay the base fee
         if t.tx().gas_price < header.base_fee().unwrap_or_default() && !t.has_zero_gas_price() {
             return Err(transaction::Error::GasPriceLowerThanBaseFee {

@@ -45,6 +45,8 @@ use std::{
     u64,
 };
 
+use crate::executive::FeesParams;
+
 use self::finality::RollingFinality;
 use super::{
     signer::EngineSigner,
@@ -81,20 +83,20 @@ use types::{
     header::{ExtendedHeader, Header},
     ids::BlockId,
     transaction::SignedTransaction,
-    transaction::UnverifiedTransaction,
     BlockNumber,
 };
 use unexpected::{Mismatch, OutOfBounds};
 
 use types::{
-    receipt::{TypedReceipt},
-    transaction::{Action, Error as TransactionError, Transaction, TypedTransaction},
+    transaction::{Action, Transaction, TypedTransaction},
 };
 use trace::Tracing;
 
 //mod block_gas_limit as crate_block_gas_limit;
 mod finality;
 mod randomness;
+mod block_gas_price;
+mod block_tx_fee;
 pub(crate) mod util;
 
 /// `AuthorityRound` params.
@@ -144,6 +146,14 @@ pub struct AuthorityRoundParams {
     /// If set, this is the block number at which the consensus engine switches from AuRa to AuRa
     /// with POSDAO modifications.
     pub posdao_transition: Option<BlockNumber>,
+    /// Fees contract addresses with their associated starting block numbers.
+    pub fees_contract_transitions: BTreeMap<u64, Address>,
+}
+
+const TX_FEE_EVENT_NAME: &'static [u8] = &*b"TxFee(address,uint256)";
+
+lazy_static! {
+    static ref TX_FEE_EVENT_NAME_HASH: H256 = keccak(TX_FEE_EVENT_NAME);
 }
 
 const U16_MAX: usize = ::std::u16::MAX as usize;
@@ -245,6 +255,12 @@ impl From<ethjson::spec::AuthorityRoundParams> for AuthorityRoundParams {
             .into_iter()
             .map(|(block_num, address)| (block_num.into(), address.into()))
             .collect();
+        let fees_transitions: BTreeMap<_, _> = p
+            .fees_contract_transitions
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(block_num, address)| (block_num.into(), address.into()))
+            .collect();
         AuthorityRoundParams {
             step_durations,
             validators: new_validator_set_posdao(p.validators, p.posdao_transition.map(Into::into)),
@@ -295,6 +311,7 @@ impl From<ethjson::spec::AuthorityRoundParams> for AuthorityRoundParams {
             randomness_contract_address,
             block_gas_limit_contract_transitions,
             posdao_transition: p.posdao_transition.map(Into::into),
+            fees_contract_transitions: fees_transitions,
         }
     }
 }
@@ -721,6 +738,7 @@ pub struct AuthorityRound {
     /// modifications. For details about POSDAO, see the whitepaper:
     /// https://www.xdaichain.com/for-validators/posdao-whitepaper
     posdao_transition: Option<BlockNumber>,
+    fees_contract_transitions: BTreeMap<u64, Address>,
 }
 
 // header-chain validator.
@@ -1090,6 +1108,7 @@ impl AuthorityRound {
             block_gas_limit_contract_transitions: our_params.block_gas_limit_contract_transitions,
             gas_limit_override_cache: Mutex::new(LruCache::new(GAS_LIMIT_OVERRIDE_CACHE_CAPACITY)),
             posdao_transition: our_params.posdao_transition,
+            fees_contract_transitions: our_params.fees_contract_transitions,
         });
 
         // Do not initialize timeouts for tests.
@@ -1369,7 +1388,7 @@ impl AuthorityRound {
     }
 
     /// Returns the reference to the client, if registered.
-    fn upgrade_client_or<'a, T>(
+    pub fn upgrade_client_or<'a, T>(
         &self,
         opt_error_msg: T,
     ) -> Result<Arc<dyn EngineClient>, EngineError>
@@ -1498,48 +1517,41 @@ impl IoHandler<()> for TransitionHandler {
     }
 }
 
-fn push_reward_transaction<'a>(
+fn push_airdao_transaction(
     machine: &EthereumMachine,
-    block: &'a mut ExecutedBlock,
+    block: &mut ExecutedBlock,
     t: SignedTransaction,
     h: Option<H256>,
-) -> Result<&'a TypedReceipt, Error> {
+) -> Option<u64> {
     if block.transactions_set.contains(&t.hash()) {
-        return Err(TransactionError::AlreadyImported.into());
+        return None;
     }
-    let tx: &UnverifiedTransaction = &*t;
-    let gas = if let TypedTransaction::Legacy(txl) = tx.as_unsigned() {
-                txl.gas
-            } else {
-                U256::zero()
-            };
 
-    let env_info = {
-        let mut env_info = block.env_info();
-        env_info.gas_limit = env_info.gas_limit.saturating_add(gas);
-        env_info
-    };
+    let env_info = block.env_info();
+
     // let gas_used = env_info.gas_used;
-    let outcome = block.state.apply(
+    let outcome = match block.state.apply(
         &env_info,
         machine,
+        None,
         &t,
         block.traces.is_enabled(),
-    )?;
+    ) {
+        Ok(outcome) => outcome,
+        Err(e) => {
+            info!(target: "engine", "push_reward_transaction: {:?}", e);
+            return None;
+        }
+    };
 
-    block
-        .transactions_set
-        .insert(h.unwrap_or_else(|| t.hash()));
+    block.transactions_set.insert(h.unwrap_or_else(|| t.hash()));
     block.transactions.push(t.into());
     if let Tracing::Enabled(ref mut traces) = block.traces {
         traces.push(outcome.trace.into());
     }
-    // let mut recept = outcome.receipt.receipt_mut();
+    let gas_used = outcome.receipt.gas_used.as_u64();
     block.receipts.push(outcome.receipt);
-    Ok(block
-        .receipts
-        .last()
-        .expect("receipt just pushed; qed"))
+    Some(gas_used)
 }
 
 impl Engine<EthereumMachine> for AuthorityRound {
@@ -1557,7 +1569,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
         header_expected_seal_fields(header, self.empty_steps_transition)
     }
 
-    fn push_reward_transaction(&self, block: & mut ExecutedBlock) {
+    fn push_reward_transaction(&self, block: &mut ExecutedBlock, fees_params: Option<FeesParams>) {
         let author = *block.header.author();
 
         let block_reward_contract_transition = self
@@ -1570,6 +1582,11 @@ impl Engine<EthereumMachine> for AuthorityRound {
             .range(..=block.header.number())
             .last();
 
+        let fees_contract_transition = self
+            .fees_contract_transitions
+            .range(..=block.header.number())
+            .last();
+
         let reward_mode = if let Some((_, mode)) = block_reward_mode_transition {
             *mode
         } else {
@@ -1577,6 +1594,8 @@ impl Engine<EthereumMachine> for AuthorityRound {
         };
 
         if reward_mode > 0 {
+            let mut injected = false;
+            let mut gas = 1_000_000;
             if let Some((_, contract)) = block_reward_contract_transition {
                 if let Some(address) = contract.address() {
                     if !block.transactions.iter().any(|tx| {
@@ -1597,10 +1616,8 @@ impl Engine<EthereumMachine> for AuthorityRound {
                                 .range(..=block.header.number())
                                 .last();
 
-                            let gas = if let Some((_, gas)) = block_gas_reserved_transition {
-                                *gas
-                            } else {
-                                1_000_000
+                            if let Some((_, gas_reserved)) = block_gas_reserved_transition {
+                                gas = *gas_reserved;
                             };
 
                             let t = TypedTransaction::Legacy(Transaction {
@@ -1616,10 +1633,64 @@ impl Engine<EthereumMachine> for AuthorityRound {
 
                             if let Ok(signature) = self.sign(t.signature_hash(Some(chain_id))).map(Into::into) {
                                 if let Ok(tx) = SignedTransaction::new(t.with_signature(signature, Some(chain_id))) {
-                                    if let Err(e) = push_reward_transaction(&self.machine, block, tx, None) {
-                                        info!(target: "engine", "push_reward_transaction: {:?}", e);
+                                    if let Some(gas_used) = push_airdao_transaction(&self.machine, block, tx, None) {
+                                        gas = block.header.gas_limit().as_u64() - gas_used;
+                                        injected = true;
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+            if injected {
+                if let Some(params) = fees_params {
+                    if let Some((_, address)) = fees_contract_transition {
+                        let (author_fees, governance_fees) = block.transactions.iter().enumerate()
+                            .filter_map(|(i, tx)| {
+                                if i == 0 {
+                                    // Handling the first transaction in the block
+                                    let gas_used = block.receipts[i].gas_used;
+                                    tx.gas_price().map(|gas_price| (gas_used, gas_price))
+                                } else {
+                                    let prev = &block.receipts[i-1];
+                                    let current = &block.receipts[i];
+                                    let gas_used = current.gas_used - prev.gas_used;
+                                    tx.gas_price().map(|gas_price| (gas_used, gas_price))
+                                }
+                            })
+                            .fold((U256::zero(), U256::zero()), |(acc_author, acc_governance), (gas_used, gas_price)| {
+                                //Assume that transaction is checked already
+                                let (fees_value, _) = gas_used.overflowing_mul(gas_price);
+                                let governance_part = fees_value.saturating_mul(params.governance_part) / U256::from(1_000_000);
+                                let author_part = fees_value.saturating_sub(governance_part);
+                                (acc_author.saturating_add(author_part), acc_governance.saturating_add(governance_part))
+                            });
+
+                        let mut data = [0u8; 132];
+                        data[0] = 0x57;
+                        data[1] = 0xc3;
+                        data[2] = 0xc9;
+                        data[3] = 0xfb;
+                        data[16..36].copy_from_slice(&author.to_fixed_bytes());
+                        author_fees.to_big_endian(&mut data[36..68]);
+                        data[80..100].copy_from_slice(&params.address.to_fixed_bytes());
+                        governance_fees.to_big_endian(&mut data[100..132]);
+
+                        let t = TypedTransaction::Legacy(Transaction {
+                            nonce: block.state.nonce(&author).unwrap(),
+                            gas_price: U256::zero(),
+                            gas: U256::from(gas),
+                            action: Action::Call(*address),
+                            value: U256::zero(),
+                            data: data.to_vec(),
+                        });
+
+                        let chain_id = self.machine.params().chain_id;
+
+                        if let Ok(signature) = self.sign(t.signature_hash(Some(chain_id))).map(Into::into) {
+                            if let Ok(tx) = SignedTransaction::new(t.with_signature(signature, Some(chain_id))) {
+                                push_airdao_transaction(&self.machine, block, tx, None);
                             }
                         }
                     }
@@ -2541,6 +2612,59 @@ impl Engine<EthereumMachine> for AuthorityRound {
             .lock()
             .insert(header.hash(), limit);
         limit
+    }
+
+    fn get_gas_price(&self, header: &Header) -> Option<U256> {
+        if let Some(address) = self.current_fees_address(header) {
+            let cl = self.upgrade_client_or("Failed to get the client").expect("Failed to get the client");
+            let client = cl.as_full_client().unwrap();
+            block_gas_price::block_gas_price(client, header, address)
+        } else {
+            None
+        }
+    }
+
+    fn get_fee_params(&self, header: &Header) -> Option<FeesParams> {
+        if let Some(address) = self.current_fees_address(header) {
+            let cl = self.upgrade_client_or("Failed to get the client").expect("Failed to get the client");
+            let client = cl.as_full_client().unwrap();
+            block_tx_fee::block_tx_fee(client, header, address)
+        } else {
+            None
+        }
+    }
+
+    fn current_fees_address(&self, header: &Header) -> Option<Address> {
+        let fees_contract_transition = self
+            .fees_contract_transitions
+            .range(..=header.number())
+            .last();
+        if let Some((_, address)) = fees_contract_transition {
+            // trace!(target: "engine", "Got fees contract transition on block number {}", header.number());
+            return Some(*address);
+        } else {
+            // trace!(target: "engine", "No fees contract transition on blcok number {}", header.number());
+            return None;
+        }
+    }
+
+    fn current_block_reward_address(&self, header: &Header) -> Option<Address> {
+        let block_reward_mode_transition = self
+            .block_reward_mode_transitions
+            .range(..=header.number())
+            .last();
+
+        let block_reward_contract_transition = self
+            .block_reward_contract_transitions
+            .range(..=header.number())
+            .last();
+
+        if let Some((_, _)) = block_reward_mode_transition {
+            if let Some((_, contract)) = block_reward_contract_transition {
+                return contract.address();
+            }
+        }
+        return None;
     }
 }
 

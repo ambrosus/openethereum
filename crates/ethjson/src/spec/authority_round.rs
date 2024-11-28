@@ -106,6 +106,8 @@ pub struct AuthorityRoundParams {
     /// The block number at which the consensus engine switches from AuRa to AuRa with POSDAO
     /// modifications.
     pub posdao_transition: Option<Uint>,
+    /// Fees contract addresses with their associated starting block numbers.
+    pub fees_contract_transitions: Option<BTreeMap<Uint, Address>>,
 }
 
 /// Authority engine deserialization.

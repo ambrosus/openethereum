@@ -55,6 +55,8 @@ use types::{
     transaction::{Error as TransactionError, SignedTransaction},
 };
 
+use crate::{executive::FeesParams};
+
 /// Block that is ready for transactions to be added.
 ///
 /// It's a bit like a Vec<Transaction>, except that whenever a transaction is pushed, we execute it and
@@ -62,6 +64,8 @@ use types::{
 pub struct OpenBlock<'x> {
     block: ExecutedBlock,
     engine: &'x dyn EthEngine,
+    gas_price: Option<U256>,
+    fees_params: Option<FeesParams>,
 }
 
 /// Just like `OpenBlock`, except that we've applied `Engine::on_close_block`, finished up the non-seal header fields,
@@ -188,6 +192,8 @@ impl<'x> OpenBlock<'x> {
         let mut r = OpenBlock {
             block: ExecutedBlock::new(state, last_hashes, tracing),
             engine: engine,
+			gas_price: None,
+			fees_params: None,
         };
 
         r.block.header.set_parent_hash(parent.hash());
@@ -217,6 +223,9 @@ impl<'x> OpenBlock<'x> {
         // t_nb 8.1.3 updating last hashes and the DAO fork, for ethash.
         engine.machine().on_new_block(&mut r.block)?;
         engine.on_new_block(&mut r.block, is_epoch_begin, &mut ancestry.into_iter())?;
+
+		r.update_gas_price();
+		r.update_fees_params();
 
         Ok(r)
     }
@@ -282,6 +291,7 @@ impl<'x> OpenBlock<'x> {
         let outcome = self.block.state.apply(
             &env_info,
             self.engine.machine(),
+            self.fees_params,
             &t,
             self.block.traces.is_enabled(),
         )?;
@@ -299,6 +309,30 @@ impl<'x> OpenBlock<'x> {
             .receipts
             .last()
             .expect("receipt just pushed; qed"))
+    }
+
+    /// Returns gas price getted from from contract during block creation
+    pub fn get_current_gas_price(&self) -> Option<U256> {
+        self.gas_price
+    }
+
+    /// Gets the current gas price from the fees contract.
+    fn update_gas_price(&mut self) {
+        if let Some(price) = self.engine.get_gas_price(&self.block.header) {
+            self.gas_price = Some(price);
+        }
+    }
+
+    /// Get the current fees params from the fees contract.
+    pub fn get_fees_params(&self) -> Option<FeesParams> {
+        self.fees_params
+    }
+
+    /// Get the current fees params from the fees contract.
+    fn update_fees_params(&mut self) {
+        if let Some(params) = self.engine.get_fee_params(&self.block.header) {
+            self.fees_params = Some(params);
+        }
     }
 
     /// Push transactions onto the block.
@@ -456,6 +490,8 @@ impl ClosedBlock {
         OpenBlock {
             block: block,
             engine: engine,
+			gas_price: None,
+			fees_params: None,
         }
     }
 }

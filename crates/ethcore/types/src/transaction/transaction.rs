@@ -21,6 +21,7 @@ use crate::{
     hash::keccak,
     transaction::error,
 };
+
 use ethereum_types::{Address, BigEndianHash, H160, H256, U256};
 use parity_util_mem::MallocSizeOf;
 
@@ -977,6 +978,16 @@ impl SignedTransaction {
         self.transaction.is_unsigned()
     }
 
+	/// Returns the gas price is the type of tx is Legacy
+	pub fn gas_price(&self) -> Option<U256> {
+		match &self.transaction.unsigned {
+			TypedTransaction::Legacy(tx) => {
+				Some(tx.gas_price)
+			},
+			_ => None,
+		}
+	}
+
     /// Deconstructs this transaction back into `UnverifiedTransaction`
     pub fn deconstruct(self) -> (UnverifiedTransaction, Address, Option<Public>) {
         (self.transaction, self.sender, self.public)
@@ -988,6 +999,7 @@ impl SignedTransaction {
             tx.unsigned.rlp_append(s, tx.chain_id, &tx.signature);
         }
     }
+
 }
 
 /// Signed Transaction that is a part of canon blockchain.
