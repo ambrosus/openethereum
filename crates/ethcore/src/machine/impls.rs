@@ -376,52 +376,76 @@ impl EthereumMachine {
         &self,
         t: UnverifiedTransaction,
         header: &Header,
-		gas_price: Option<U256>,
-		current_block_reward_addr: Option<Address>,
+        gas_price: Option<U256>,
+        current_block_reward_addr: Option<Address>,
+        current_fees_addr: Option<Address>,
     ) -> Result<SignedTransaction, transaction::Error> {
-		// Cheching block reward transaction. It should be verified with zero gas price
-		// all other should pay at least minimal gas price
-		// Check transaction sended by the block author
-		let public = t.recover_public()?;
-		let sender = public_to_address(&public);
-		let sended_by_block_author = sender == *header.author();
+        // Cheching block reward transaction. It should be verified with zero gas price
+        // all other should pay at least minimal gas price
+        // Check transaction sended by the block author
+        let public = t.recover_public()?;
+        let sender = public_to_address(&public);
+        let sended_by_block_author = sender == *header.author();
 
-		//Check if transaction has block reward specific data
-		let has_reward_data = match t.as_unsigned() {
-			TypedTransaction::Legacy(tx) => {
-				tx.data == vec![0xc3, 0x3f, 0xb8, 0x77]
-			}
-			_ => false,
-		};
+        //Check if transaction has block reward specific data
+        let has_reward_data = match t.as_unsigned() {
+            TypedTransaction::Legacy(tx) => {
+                tx.data == vec![0xc3, 0x3f, 0xb8, 0x77]
+            }
+            _ => false,
+        };
 
-		//Check if transaction calling the correct contract
-		let calling_block_reward = match t.as_unsigned() {
-			TypedTransaction::Legacy(tx) => {
-				match tx.action {
-					Action::Call(addr) => {
-						if let Some(reward_address) = current_block_reward_addr {
-							addr == reward_address
-						} else {
-							false
-						}
-					}
-					_ => false,
-				}
-			}
-			_ => false,
-		};
+        //Check if transaction has fees specific data
+        let has_fees_data = match t.as_unsigned() {
+            TypedTransaction::Legacy(tx) => {
+                tx.data == vec![0x57, 0xc3, 0xc9, 0xfb]
+            }
+            _ => false,
+        };
 
-		let is_block_reward_tx = sended_by_block_author && has_reward_data && calling_block_reward;
+        //Check if transaction calling the block reward contract
+        let calling_block_reward = match t.as_unsigned() {
+            TypedTransaction::Legacy(tx) => {
+                match tx.action {
+                    Action::Call(addr) => {
+                        if let Some(reward_address) = current_block_reward_addr {
+                            addr == reward_address
+                        } else {
+                            false
+                        }
+                    }
+                    _ => false,
+                }
+            }
+            _ => false,
+        };
 
-		if !is_block_reward_tx {
-			if let Some(price) = gas_price {
-				if t.tx().gas_price < price {
-					return Err(transaction::Error::InsufficientGas { minimal: price, got: t.tx().gas_price });
-				}
-			}
-		}
+        //Check if transaction calling the fees contract
+        let calling_fees = match t.as_unsigned() {
+            TypedTransaction::Legacy(tx) => {
+                match tx.action {
+                    Action::Call(addr) => {
+                        if let Some(fees_address) = current_fees_addr {
+                            addr == fees_address
+                        } else {
+                            false
+                        }
+                    }
+                    _ => false,
+                }
+            }
+            _ => false,
+        };
 
+        let is_airdao_tx = sended_by_block_author && ((has_reward_data && calling_block_reward) || (has_fees_data && calling_fees));
 
+        if !is_airdao_tx {
+            if let Some(price) = gas_price {
+                if t.tx().gas_price < price {
+                    return Err(transaction::Error::InsufficientGas { minimal: price, got: t.tx().gas_price });
+                }
+            }
+        }
 
         // ensure that the user was willing to at least pay the base fee
         if t.tx().gas_price < header.base_fee().unwrap_or_default() && !t.has_zero_gas_price() {
