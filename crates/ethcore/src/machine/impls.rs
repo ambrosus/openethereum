@@ -398,7 +398,7 @@ impl EthereumMachine {
         //Check if transaction has fees specific data
         let has_fees_data = match t.as_unsigned() {
             TypedTransaction::Legacy(tx) => {
-                tx.data == vec![0x57, 0xc3, 0xc9, 0xfb]
+                tx.data.len() == 132 && tx.data[0] == 0x57 && tx.data[1] == 0xc3 && tx.data[2] == 0xc9 && tx.data[3] == 0xfb
             }
             _ => false,
         };
