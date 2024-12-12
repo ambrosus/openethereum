@@ -150,12 +150,6 @@ pub struct AuthorityRoundParams {
     pub fees_contract_transitions: BTreeMap<u64, Address>,
 }
 
-const TX_FEE_EVENT_NAME: &'static [u8] = &*b"TxFee(address,uint256)";
-
-lazy_static! {
-    static ref TX_FEE_EVENT_NAME_HASH: H256 = keccak(TX_FEE_EVENT_NAME);
-}
-
 const U16_MAX: usize = ::std::u16::MAX as usize;
 
 /// The number of recent block hashes for which the gas limit override is memoized.

@@ -442,7 +442,7 @@ impl EthereumMachine {
         if !is_airdao_tx {
             if let Some(price) = gas_price {
                 if t.tx().gas_price < price {
-                    return Err(transaction::Error::InsufficientGas { minimal: price, got: t.tx().gas_price });
+                    return Err(transaction::Error::InsufficientGasPrice { minimal: price, got: t.tx().gas_price });
                 }
             }
         }
