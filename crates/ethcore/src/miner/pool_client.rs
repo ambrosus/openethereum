@@ -116,7 +116,13 @@ where
         &self,
         tx: &SignedTransaction,
         header: &Header,
+        gas_price: Option<U256>,
     ) -> Result<(), transaction::Error> {
+        if let Some(price) = gas_price {
+            if tx.tx().gas_price < price {
+                return Err(transaction::Error::InsufficientGasPrice { minimal: price, got: tx.tx().gas_price });
+            }
+        }
         self.engine.machine().verify_transaction_basic(tx, header)?;
         self.engine
             .machine()

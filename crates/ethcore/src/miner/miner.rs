@@ -552,6 +552,9 @@ impl Miner {
             elapsed.as_secs() * 1000 + elapsed.subsec_nanos() as u64 / 1_000_000
         };
 
+        let fees_params = open_block.get_fees_params();
+        let latest_gas_price = self.engine.get_gas_price(&open_block.header);
+
         let block_start = Instant::now();
         debug!(target: "miner", "Attempting to push {} transactions.", engine_txs.len() + queue_txs.len());
 
@@ -566,7 +569,7 @@ impl Miner {
 
             // Re-verify transaction again vs current state.
             let result = client
-                .verify_for_pending_block(&transaction, &open_block.header)
+                .verify_for_pending_block(&transaction, &open_block.header, latest_gas_price)
                 .map_err(|e| e.into())
                 .and_then(|_| open_block.push_transaction(transaction, None, true));
 
@@ -641,7 +644,6 @@ impl Miner {
             }
         }
 
-        let fees_params = open_block.get_fees_params();
         self.engine.push_reward_transaction(open_block.block_mut(), fees_params);
 
         let elapsed = block_start.elapsed();
