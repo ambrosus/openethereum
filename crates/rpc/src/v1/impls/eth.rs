@@ -689,11 +689,23 @@ where
     }
 
     fn gas_price(&self) -> BoxFuture<U256> {
-        Box::new(future::ok(default_gas_price(
-            &*self.client,
-            &*self.miner,
-            self.options.gas_price_percentile,
-        )))
+        let header = try_bf!(self
+                    .client
+                    .block_header(BlockId::Latest)
+                    .ok_or_else(errors::state_pruned)
+                    .and_then(|h| h
+                    .decode(self.client.engine().params().eip1559_transition)
+                    .map_err(errors::decode)));
+
+        if let Some(price) = self.client.engine().get_gas_price(&header) {
+            Box::new(future::done(Ok(price)))
+        } else {
+            Box::new(future::ok(default_gas_price(
+                &*self.client,
+                &*self.miner,
+                self.options.gas_price_percentile,
+            )))
+        }
     }
 
     fn max_priority_fee_per_gas(&self) -> BoxFuture<U256> {
