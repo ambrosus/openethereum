@@ -25,7 +25,7 @@ Follow these steps to set up AirDAO (ex Ambrosus) OpenEthereum:
 2. Download the blockchain data backup::
 
     ```shell
-    curl -s https://backup.ambrosus.io/blockchain.tgz | sudo tar zxpf -
+    curl -s https://backup.airdao.io/blockchain.tgz | sudo tar zxpf -
     ```
 
 4. Fetch the AirDAO (ex Ambrosus) chain specification `chain.json`:
