@@ -2468,7 +2468,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
                 };
 
                 let signal_number = finalized_header.number();
-                if signal_number == 32323259 {
+                if signal_number == 32323259 || signal_number == 34170040 || signal_number == 34977724 {
                     info!(target: "engine", "Skipping validator set change signalled at block {}", signal_number);
                     return None;
                 }
