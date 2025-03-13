@@ -2039,7 +2039,8 @@ impl Engine<EthereumMachine> for AuthorityRound {
                     }
                 }
             }
-        } else {
+        }
+        if reward_mode == 0 || reward_mode == 2 {
             let rewards: Vec<_> = if let Some((_, contract)) = block_reward_contract_transition {
                 let mut call = crate::engines::default_system_or_code_call(&self.machine, block);
                 let rewards = contract.reward(&beneficiaries, &mut call)?;
@@ -2366,7 +2367,7 @@ impl Engine<EthereumMachine> for AuthorityRound {
                 };
 
                 let signal_number = finalized_header.number();
-                if signal_number == 32323259 {
+                if signal_number == 32323259 || signal_number == 34170040 || signal_number == 34977724 {
                     info!(target: "engine", "Skipping validator set change signalled at block {}", signal_number);
                     return None;
                 }
