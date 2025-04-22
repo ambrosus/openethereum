@@ -2,6 +2,10 @@
 
 This guide provides step-by-step instructions for compiling and installing AirDAO (ex Ambrosus) OpenEthereum from source on your Linux server.
 
+## OpenEthereum Container Update Guide
+
+[OpenEthereum Container Update Guide](#openethereum-binary-update-guide)
+
 ## Prerequisites
 
 Before you begin, ensure that you have the following prerequisites:
@@ -127,3 +131,86 @@ Follow these steps to compile and install AirDAO (ex Ambrosus) OpenEthereum:
     ```
 
 	 **_Very Important:_** The only stable and up-to-date version is the one used in the documentation, which is currently openethereum:v3.3.3-amb1.2.4.
+
+
+# OpenEthereum Binary Update Guide
+
+1. Stop OpenEthereum process:
+
+   ```shell
+   # First find the process PID
+   ps aux | grep openethereum
+
+   # Send a SIGTERM signal (softer termination)
+   kill <PID_number>
+
+   # Or SIGINT (equivalent to Ctrl+C)
+   kill -2 <PID_number>
+   ```
+
+  If the process is running in the background or as a service:
+
+   ```shell
+   # Find the PID
+   pidof openethereum
+   # or
+   pgrep openethereum
+	
+   # Then send a signal
+   kill $(pidof openethereum)
+   ```
+
+2. Update the source code repository:
+
+   ```shell
+   # Switch to the root directory of the project
+   cd /root/openethereum
+
+   # Make sure you are in the main branch
+   git checkout main
+
+   # Get the latest changes
+   git fetch origin
+
+   # Switch to a specific version, such as v3.3.3-amb1.2.5
+   git checkout v3.3.3-amb1.2.5 # this is now the current stable version
+   ```
+   
+
+3. Recompile the project with the same parameters:
+
+   ```shell
+   # Clean the previous build
+   cargo clean
+
+   # Compile with the same parameters as before
+   cargo build --release --features final --target x86_64-unknown-linux-gnu
+   ```
+
+4. Check out the new version:
+
+   ```shell
+   ./target/x86_64-unknown-linux-gnu/release/openethereum --version
+   ```
+   	 **_Very Important:_** After compilation, you should see a similar message where part of the commit hash (e.g. ‘e9c4f514f’) should correspond to a specific tag. You can compare hashes for each tag in our repository: https://github.com/ambrosus/openethereum/releases/. Example output:
+
+   ```shell
+   root@openethereum:~/openethereum# ./target/x86_64-unknown-linux-gnu/release/openethereum --version
+   OpenEthereum Client.
+     version OpenEthereum/v3.3.3-stable-e9c4f514f-20250418/x86_64-linux-gnu/rustc1.47.0
+   Copyright 2015-2020 Parity Technologies (UK) Ltd.
+   License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+   This is free software: you are free to change and redistribute it.
+   There is NO WARRANTY, to the extent permitted by law.
+
+   By Wood/Paronyan/Kotewicz/Drwięga/Volf/Greeff
+      Habermeier/Czaban/Gotchac/Redman/Nikolsky
+      Schoedon/Tang/Adolfsson/Silva/Palm/Hirsz et al.
+   ```
+
+5. Run the updated version:
+
+   ```shell
+   ./target/x86_64-unknown-linux-gnu/release/openethereum --config /root/openethereum/app/parity_config.toml
+   ```
+
