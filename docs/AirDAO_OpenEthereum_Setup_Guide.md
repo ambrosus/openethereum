@@ -1,6 +1,6 @@
-# AirDAO (ex Ambrosus) OpenEthereum Setup Guide
+# Ascendia OpenEthereum Setup Guide
 
-This guide provides step-by-step instructions for setting up Ambrosus OpenEthereum on your server.
+This guide provides step-by-step instructions for setting up Ascendia OpenEthereum on your server.
 
 ## Prerequisites
 
@@ -14,7 +14,7 @@ Before you begin, ensure that you have the following prerequisites:
 
 ## Installation Steps
 
-Follow these steps to set up AirDAO (ex Ambrosus) OpenEthereum:
+Follow these steps to set up Ascendia OpenEthereum:
 
 1. Create necessary directories:
    ```shell
@@ -28,7 +28,7 @@ Follow these steps to set up AirDAO (ex Ambrosus) OpenEthereum:
     curl -s https://backup.airdao.io/blockchain.tgz | sudo tar zxpf -
     ```
 
-4. Fetch the AirDAO (ex Ambrosus) chain specification `chain.json`:
+4. Fetch the Ascendia chain specification `chain.json`:
 
     ```shell
     curl -o chain.json https://chainspec.ambrosus.io/
@@ -91,10 +91,10 @@ Follow these steps to set up AirDAO (ex Ambrosus) OpenEthereum:
 
      `/root/server/data`.
 
-9. Start AirDAO (ex Ambrosus) OpenEthereum as a Docker container:
+9. Start Ascendia OpenEthereum as a Docker container:
 
     ```shell
-    docker run --name "amb-node" -d -v /root/server/data/:/app -p 8545:8545 ghcr.io/ambrosus/openethereum:v3.3.3-amb1.2.4 --config /app/parity_config.toml
+    docker run --name "amb-node" -d -v /root/server/data/:/app -p 8545:8545 ghcr.io/ascendia-network/openethereum:v3.3.3-amb1.2.4 --config /app/parity_config.toml
     ```
 
 	 **_Very Important:_** The only stable and up-to-date version is the one used in the documentation, which is currently openethereum:v3.3.3-amb1.2.4.
