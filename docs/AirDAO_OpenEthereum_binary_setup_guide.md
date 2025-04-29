@@ -1,6 +1,6 @@
-# AirDAO (ex Ambrosus) OpenEthereum Compilation and Installation Guide
+# Ascendia OpenEthereum Compilation and Installation Guide
 
-This guide provides step-by-step instructions for compiling and installing AirDAO (ex Ambrosus) OpenEthereum from source on your Linux server.
+This guide provides step-by-step instructions for compiling and installing Ascendia OpenEthereum from source on your Linux server.
 
 ## OpenEthereum Container Update Guide
 
@@ -15,7 +15,7 @@ Before you begin, ensure that you have the following prerequisites:
 
 ## Installation Steps
 
-Follow these steps to compile and install AirDAO (ex Ambrosus) OpenEthereum:
+Follow these steps to compile and install Ascendia OpenEthereum:
 
 1. Update your package list:
 
@@ -30,7 +30,7 @@ Follow these steps to compile and install AirDAO (ex Ambrosus) OpenEthereum:
 3. Clone the OpenEthereum repository:
 
    ```shell
-   git clone https://github.com/ambrosus/openethereum.git
+   git clone https://github.com/ascendia-network/openethereum.git
    ```
 
 4. Navigate to the OpenEthereum directory:
@@ -55,7 +55,7 @@ Follow these steps to compile and install AirDAO (ex Ambrosus) OpenEthereum:
    rustup default 1.47.0
    ```
 
-7. Build AirDAO (ex Ambrosus) OpenEthereum:
+7. Build Aascendia OpenEthereum:
 
    ```shell
    cargo build --release --features final --target x86_64-unknown-linux-gnu
@@ -75,7 +75,7 @@ Follow these steps to compile and install AirDAO (ex Ambrosus) OpenEthereum:
    curl -s https://backup.ambrosus.io/blockchain.tgz | sudo tar zxpf -
    ```
 
-10. Fetch the AirDAO (ex Ambrosus) chain specification chain.json:
+10. Fetch the Aascendia chain specification chain.json:
 
     ```shell
     curl -o chain.json https://chainspec.ambrosus.io/
@@ -124,7 +124,7 @@ Follow these steps to compile and install AirDAO (ex Ambrosus) OpenEthereum:
 
     You should see the: `chain.json`, `chains`, `parity_config.toml`.
 
-12. Go back and Run AirDAO (ex Ambrosus) OpenEthereum using the provided configuration file:
+12. Go back and Run Aascendia OpenEthereum using the provided configuration file:
 
     ```shell
     ./target/x86_64-unknown-linux-gnu/release/openethereum --config /root/openethereum/app/parity_config.toml
